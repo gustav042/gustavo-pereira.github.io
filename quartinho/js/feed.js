@@ -1,0 +1,291 @@
+// Feed (início): o que os amigos andam assistindo, estilo "atualizações dos amigos" dos anos 2000.
+window.Feed = (function () {
+  'use strict';
+  const { esc, corDe, fmtData, estrelas, hash, corValida, hoje, limitar } = window.U;
+  const CHAVE_CURTIDAS = 'quartinho:curtidas';
+  const POR_PAGINA = 12;
+
+  let curtidas = {};
+  try { curtidas = JSON.parse(localStorage.getItem(CHAVE_CURTIDAS) || '{}') || {}; } catch (e) { /* ignora */ }
+  let pagina = 1;
+
+  const Q = () => window.Quartinho;
+  const eu = () => Q().perfis().eu;
+  const nomeDe = p => p.id === 'eu' ? 'você' : p.nome;
+
+  // ---------- montando os acontecimentos ----------
+  function eventos() {
+    const perfis = Object.values(Q().perfis());
+    const porNome = Object.fromEntries(perfis.map(p => [p.nome, p]));
+    const evs = [];
+    for (const p of perfis) {
+      (p.assistidos || []).forEach(f => evs.push({ id: `a|${p.id}|${f.titulo}|${f.data}`, tipo: 'assistiu', p, f, data: f.data }));
+      (p.diario || []).forEach(d => evs.push({ id: `d|${p.id}|${d.data}|${hash(d.texto)}`, tipo: 'diario', p, d, data: d.data }));
+      (p.recados || []).forEach(r => {
+        const autor = porNome[r.de];
+        if (autor && autor.id !== p.id) evs.push({ id: `r|${p.id}|${r.data}|${hash(r.texto)}`, tipo: 'recado', p: autor, para: p, r, data: r.data });
+      });
+    }
+    return evs.sort((a, b) => String(b.data).localeCompare(String(a.data)) || hash(b.id) - hash(a.id));
+  }
+
+  // "hoje", "ontem" ou a data; e uma hora inventada (mas sempre a mesma) pra dar clima.
+  function quando(ev) {
+    const d0 = new Date(hoje() + 'T00:00:00'), d1 = new Date(ev.data + 'T00:00:00');
+    const dias = Math.round((d0 - d1) / 86400000);
+    const dia = dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : `em ${fmtData(ev.data)}`;
+    const h = hash(ev.id);
+    return { dia, hora: `${String(8 + (h % 16)).padStart(2, '0')}:${String((h >>> 4) % 60).padStart(2, '0')}`, novo: dias <= 1 };
+  }
+
+  const qtdCurtidas = id => (hash(id) % 6) + (curtidas[id] ? 1 : 0);
+
+  function naListaQueroVer(titulo) {
+    const t = titulo.toLowerCase();
+    const p = eu();
+    return (p.listas || []).some(l => l.itens.some(i => i.toLowerCase() === t)) || (p.assistidos || []).some(f => f.titulo.toLowerCase() === t);
+  }
+
+  // ---------- pedaços de HTML ----------
+  const miniAvatar = p => `<span class="mini-av" style="border-color:${corValida(p.corDestaque, '#ff66cc')}">${Q().avatar(p)}</span>`;
+  const linkNome = p => `<a class="post-nome" href="${Q().linkQuarto(p.id)}">${esc(nomeDe(p))}</a>`;
+
+  function htmlPost(ev) {
+    const { dia, hora, novo } = quando(ev);
+    const p = ev.p;
+    let acao = '', corpo = '', extra = '';
+    if (ev.tipo === 'assistiu') {
+      const f = ev.f;
+      const meta = window.Filmes.metaDe(f);
+      acao = meta && meta.tipo === 'serie' ? 'terminou uma série' : 'assistiu um filme';
+      const capa = meta && meta.poster
+        ? `<img class="capa-feed" src="${esc(meta.poster)}" alt="Capa de ${esc(f.titulo)}" loading="lazy">`
+        : `<div class="caixinha-dvd" style="background:${corDe(f.titulo)}"><span>${esc(f.titulo)}</span></div>`;
+      corpo = `<div class="post-filme">
+          ${capa}
+          <div>
+            <p class="titulo-filme">${esc(f.titulo)} ${f.ano ? `<small>(${esc(f.ano)})</small>` : ''}</p>
+            ${meta && meta.generos.length ? `<p class="tags-genero">${meta.generos.slice(0, 3).map(g => `<span>${esc(g)}</span>`).join('')}</p>` : ''}
+            <p class="estrelas-feed" aria-label="nota ${f.nota} de 5">${estrelas(f.nota)}</p>
+            <p class="comentario-nota">${['', 'socorro, que bomba 💀', 'meh...', 'legalzinho', 'muito bom!!', 'OBRA-PRIMA ♥♥♥'][f.nota] || ''}</p>
+          </div>
+        </div>`;
+      if (p.id !== 'eu') {
+        extra = naListaQueroVer(f.titulo)
+          ? `<button class="btn98" disabled>✔ na sua lista</button>`
+          : `<button class="btn98" data-quero-ver="${esc(f.titulo)}">+ quero ver</button>`;
+      }
+    } else if (ev.tipo === 'diario') {
+      acao = 'escreveu no diário';
+      corpo = `<blockquote class="texto-diario">${esc(ev.d.texto)}</blockquote>`;
+    } else {
+      const para = ev.para;
+      acao = `deixou um recado no mural de ${para.id === 'eu' ? 'você' : `<a href="${Q().linkQuarto(para.id)}">${esc(para.nome)}</a>`}`;
+      corpo = `<div class="texto-recado">${esc(ev.r.texto)}</div>`;
+      extra = `<a class="btn98" href="${Q().linkQuarto(para.id, 'mural')}">💬 ver mural</a>`;
+    }
+    const curtido = !!curtidas[ev.id];
+    return `<article class="post post-${ev.tipo}">
+      <header class="post-topo">
+        ${miniAvatar(p)}
+        <p>${linkNome(p)} <span class="post-acao">${acao}</span> ${novo ? '<span class="novo">NOVO!</span>' : ''}<br>
+        <time>${dia} às ${hora}</time></p>
+      </header>
+      <div class="post-corpo">${corpo}</div>
+      <footer class="post-rodape">
+        <button class="btn98 ${curtido ? 'curtido' : ''}" data-curtir="${esc(ev.id)}" aria-pressed="${curtido}">👍 ${curtido ? 'curtiu' : 'curtir'} (${qtdCurtidas(ev.id)})</button>
+        ${extra}
+        <a class="btn98" href="${Q().linkQuarto(p.id)}">🚪 ${p.id === 'eu' ? 'meu quartinho' : 'visitar quartinho'}</a>
+      </footer>
+    </article>`;
+  }
+
+  function htmlTvs() {
+    const perfis = Object.values(Q().perfis()).filter(p => p.id !== 'eu' && p.assistindo && p.assistindo.titulo);
+    if (!perfis.length) return '';
+    return `<section class="caixa-feed">
+      <h2 class="titulo-caixa">📺 na TV dos amigos agora</h2>
+      <div class="tvs">${perfis.map(p => {
+        const a = p.assistindo, prog = limitar(Number(a.progresso) || 0, 0, 100);
+        return `<a class="mini-tv" href="${Q().linkQuarto(p.id)}" title="Visitar o quartinho de ${esc(p.nome)}">
+          <span class="mini-tv-tela"><b>${esc(a.titulo)}</b><small>${esc(a.detalhe)}</small><i style="width:${prog}%"></i></span>
+          <span class="mini-tv-dono">${miniAvatar(p)} ${esc(p.nome)}</span>
+          <span class="mini-tv-link">🚪 visitar</span>
+        </a>`;
+      }).join('')}</div>
+    </section>`;
+  }
+
+  function htmlStatus() {
+    const a = eu().assistindo || {};
+    return `<section class="caixa-feed caixa-status">
+      <h2 class="titulo-caixa">✏️ o que você tá vendo?</h2>
+      <form class="form98 status-form" id="f-status">
+        <div class="linha">
+          <label class="campo"><span>Título (digite pra buscar)</span><input type="text" name="titulo" maxlength="60" required value="${esc(a.titulo || '')}" placeholder="ex.: lost"></label>
+          <label class="campo"><span>Episódio/detalhe</span><input type="text" name="detalhe" maxlength="60" value="${esc(a.detalhe || '')}" placeholder="ex.: T1 · E06"></label>
+        </div>
+        <div class="linha seletor-episodio" hidden></div>
+        <div class="linha">
+          <button class="btn98" type="submit" name="acao" value="vendo">📺 tô assistindo</button>
+          <span class="ou">ou</span>
+          <label class="campo curto"><span>Nota</span><select name="nota">${[5, 4, 3, 2, 1].map(n => `<option value="${n}">${'★'.repeat(n)}</option>`).join('')}</select></label>
+          <button class="btn98" type="submit" name="acao" value="terminei">✔ terminei de ver</button>
+          <span class="msg" role="status"></span>
+        </div>
+      </form>
+    </section>`;
+  }
+
+  function htmlLateral() {
+    const perfis = Object.values(Q().perfis());
+    const meu = eu();
+    const amigos = perfis.filter(p => p.id !== 'eu');
+    // status do MSN inventado (mas estável durante a hora)
+    const hora = new Date().getHours();
+    const status = p => ['online', 'online', 'ausente', 'offline'][(hash(p.id) + hora) % 4];
+    const rotulo = { online: 'Online', ausente: 'Ausente', offline: 'Offline' };
+    // mais vistos pela galera
+    const contagem = {};
+    for (const p of perfis) for (const f of p.assistidos || []) contagem[f.titulo] = (contagem[f.titulo] || 0) + 1;
+    const top = Object.entries(contagem).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5);
+    return `
+      <section class="caixa">
+        <div class="caixa-titulo">você</div>
+        <div class="eu-feed">
+          ${miniAvatar(meu)}
+          <p><b>${esc(meu.nome)}</b><br><small>${esc(meu.humor)}</small></p>
+        </div>
+        <p><a class="btn98 btn-lateral" href="#quarto">🚪 ir pro meu quartinho</a>
+          <a class="btn98 btn-lateral" href="#stats">📊 minhas estatísticas</a></p>
+      </section>
+      <section class="caixa msn">
+        <div class="msn-topo">🦋 Messenger — amigos (${amigos.length})</div>
+        <ul class="msn-lista">${amigos.map(p => {
+          const s = status(p);
+          return `<li><a href="${Q().linkQuarto(p.id)}" class="msn-${s}">
+            <span class="msn-bolinha" aria-label="${rotulo[s]}"></span>
+            <span><b>${esc(p.nome)}</b> <small>(${rotulo[s]})</small><br><i>${esc(p.humor)}</i>
+              <br><small class="compat-msn" title="compatibilidade de gosto com você">💞 ${window.Stats.compat(meu, p).pct}% compatível</small></span>
+          </a></li>`;
+        }).join('')}</ul>
+      </section>
+      <section class="caixa">
+        <div class="caixa-titulo">🔥 mais vistos pela galera</div>
+        <ol class="top-vistos">${top.map(([t, n]) => `<li>${esc(t)} <small>(${n}x)</small></li>`).join('')}</ol>
+      </section>`;
+  }
+
+  // Busca no campo de status; se for série, mostra temporada/episódio pra escolher.
+  let escolhaStatus = null;
+  function prepararStatus() {
+    const form = document.getElementById('f-status');
+    if (!form) return;
+    escolhaStatus = null;
+    const seletor = form.querySelector('.seletor-episodio');
+    window.Busca.anexar(form.elements.titulo, {
+      aoEscolher(det) {
+        escolhaStatus = det;
+        const temps = det.meta && det.meta.temporadas;
+        if (!temps || !temps.length) { seletor.hidden = true; seletor.innerHTML = ''; form.elements.detalhe.value = ''; return; }
+        seletor.innerHTML = `
+          <label class="campo curto"><span>Temporada</span><select name="temporada">${temps.map(t => `<option value="${t.n}">${t.n}</option>`).join('')}</select></label>
+          <label class="campo curto"><span>Episódio</span><select name="episodio"></select></label>`;
+        seletor.hidden = false;
+        const selT = seletor.querySelector('[name=temporada]'), selE = seletor.querySelector('[name=episodio]');
+        const preencherEps = () => {
+          const t = temps.find(x => String(x.n) === selT.value);
+          selE.innerHTML = Array.from({ length: (t && t.episodios) || 1 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+        };
+        const atualizarDetalhe = () => { form.elements.detalhe.value = `Temporada ${selT.value} · Episódio ${selE.value}`; };
+        selT.onchange = () => { preencherEps(); atualizarDetalhe(); };
+        selE.onchange = atualizarDetalhe;
+        preencherEps(); atualizarDetalhe();
+      }
+    });
+  }
+
+  // ---------- render ----------
+  function render() {
+    const raiz = document.getElementById('tela-feed');
+    const todos = eventos();
+    const total = Math.max(1, Math.ceil(todos.length / POR_PAGINA));
+    pagina = limitar(pagina, 1, total);
+    const posts = todos.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+    raiz.innerHTML = `
+      <div class="feed-grade">
+        <aside class="perfil-lateral feed-lateral">${htmlLateral()}</aside>
+        <div class="feed-centro">
+          ${htmlStatus()}
+          ${htmlTvs()}
+          <section class="caixa-feed">
+            <h2 class="titulo-caixa">✨ atualizações dos amigos</h2>
+            <div class="posts">${posts.map(htmlPost).join('<div class="divisor" aria-hidden="true">~*~*~*~</div>')}</div>
+            <nav class="paginacao" aria-label="Páginas do feed">
+              <button class="btn98" data-pagina="${pagina - 1}" ${pagina <= 1 ? 'disabled' : ''}>« anteriores</button>
+              <span>página ${pagina} de ${total}</span>
+              <button class="btn98" data-pagina="${pagina + 1}" ${pagina >= total ? 'disabled' : ''}>mais antigas »</button>
+            </nav>
+          </section>
+        </div>
+      </div>`;
+    prepararStatus();
+  }
+
+  // ---------- ações ----------
+  document.addEventListener('click', e => {
+    const raiz = document.getElementById('tela-feed');
+    if (!raiz || !raiz.contains(e.target)) return;
+    const curtir = e.target.closest('[data-curtir]');
+    if (curtir) {
+      const id = curtir.dataset.curtir;
+      if (curtidas[id]) delete curtidas[id]; else curtidas[id] = true;
+      try { localStorage.setItem(CHAVE_CURTIDAS, JSON.stringify(curtidas)); } catch (err) { /* ignora */ }
+      render();
+      return;
+    }
+    const quero = e.target.closest('[data-quero-ver]');
+    if (quero) {
+      const p = eu();
+      let lista = p.listas.find(l => l.nome.toLowerCase() === 'quero ver');
+      if (!lista) { lista = { nome: 'Quero ver', itens: [] }; p.listas.unshift(lista); }
+      lista.itens.push(quero.dataset.queroVer);
+      Q().salvar();
+      render();
+      return;
+    }
+    const pag = e.target.closest('[data-pagina]');
+    if (pag) { pagina = Number(pag.dataset.pagina); render(); raiz.querySelector('.posts').scrollIntoView({ behavior: 'smooth' }); }
+  });
+
+  document.addEventListener('submit', e => {
+    if (e.target.id !== 'f-status') return;
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const acao = e.submitter ? e.submitter.value : 'vendo';
+    const titulo = String(fd.get('titulo') || '').trim();
+    const detalhe = String(fd.get('detalhe') || '').trim();
+    if (!titulo) return;
+    const p = eu();
+    // informações do filme/série: da busca, ou do que já estava na TV
+    const anterior = p.assistindo && p.assistindo.titulo === titulo ? p.assistindo : null;
+    const meta = escolhaStatus && escolhaStatus.titulo === titulo ? escolhaStatus.meta : (anterior && anterior.meta) || null;
+    const ano = escolhaStatus && escolhaStatus.titulo === titulo ? escolhaStatus.ano : '';
+    if (acao === 'terminei') {
+      const novo = { titulo, ano: Number(ano) || '', nota: Number(fd.get('nota')) || 3, data: hoje() };
+      if (meta) novo.meta = meta;
+      p.assistidos.unshift(novo);
+      if (anterior) p.assistindo = { titulo: '', detalhe: '', progresso: 0 };
+    } else {
+      p.assistindo = { titulo, detalhe, progresso: anterior ? anterior.progresso : 0 };
+      if (meta) p.assistindo.meta = meta;
+    }
+    Q().salvar();
+    pagina = 1;
+    render();
+    const msg = document.querySelector('#f-status .msg');
+    if (msg) msg.textContent = acao === 'terminei' ? 'guardado na estante ✔' : 'status atualizado ✔';
+  });
+
+  return { render };
+})();
