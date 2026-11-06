@@ -420,7 +420,7 @@ window.Sprites = (function () {
       desenhar(p, ctx) {
         const a = ctx.assistindo;
         const ligada = !!a.titulo;
-        const prog = Math.max(0, Math.min(100, Number(a.progresso) || 0));
+        const prog = window.Filmes ? window.Filmes.progressoDe(a) : Math.max(0, Math.min(100, Number(a.progresso) || 0));
         const tela = ligada
           ? R(9, 10, 11, 8, '#1f4f7a') + R(10, 12, 6, 1, '#c8ffc8') + R(10, 14, 8, 1, 'rgba(200,255,200,.6)')
             + R(9, 17, Math.round(11 * prog / 100), 1, '#7dff9a')
@@ -451,7 +451,40 @@ window.Sprites = (function () {
           + R(7, 16, 13, 2, '#8f8b7b') + R(7, 16, 13, 1, '#e6e2d4')
           + R(24, 11, 3, 4, '#8e2a1f') + R(24, 11, 3, 3, '#c0392b') + R(24, 11, 3, 1, '#e8766a') + R(27, 12, 1, 2, '#c0392b');
       },
-      brilhos: () => [{ x: 13, y: 7, r: 14, cor: '#5fe0d0' }]
+      brilhos: () => [{ x: 13, y: 7, r: 14, cor: '#5fe0d0' }],
+      // de costas: vê a traseira do monitor (com o cabo) e o painel de trás da mesa
+      costas(p) {
+        return R(0, 12, 32, 10, p.o) + R(1, 13, 30, 5, p.t) + R(1, 13, 30, 1, p.h)
+          + R(0, 18, 32, 11, p.o) + R(1, 18, 30, 10, p.f) + R(1, 18, 30, 1, p.s) + R(2, 21, 28, 1, p.s) + R(2, 25, 28, 1, p.s)
+          + R(1, 28, 3, 2, p.o) + R(28, 28, 3, 2, p.o)
+          + R(5, 0, 17, 15, '#5c574a') + R(6, 1, 15, 13, '#c9c5b5') + R(6, 1, 15, 1, '#e6e2d4')
+          + R(9, 3, 9, 7, '#b4b0a0') + R(10, 4, 7, 1, '#8f8b7b') + R(10, 6, 7, 1, '#8f8b7b') + R(10, 8, 7, 1, '#8f8b7b')
+          + R(13, 14, 2, 1, '#222') + R(14, 15, 1, 4, '#222') + R(14, 18, 4, 1, '#222')
+          + R(4, 11, 3, 4, '#8e2a1f') + R(4, 11, 3, 3, '#c0392b') + R(4, 11, 3, 1, '#e8766a') + R(3, 12, 1, 2, '#c0392b');
+      },
+      brilhosCostas: () => [],
+      // de lado (virado pra esquerda): mesa comprida pra trás, monitor de perfil com a tela pra esquerda
+      girado: {
+        w: 16, fh: 32, h: 44,
+        desenhar(p) {
+          return R(0, 10, 16, 26, p.o) + R(1, 11, 14, 22, p.t) + R(1, 11, 1, 22, p.h) + R(14, 11, 1, 22, p.s)
+            + R(1, 33, 14, 3, p.f) + R(1, 33, 14, 1, p.h)
+            + R(0, 36, 3, 8, p.o) + R(1, 36, 1, 7, p.f) + R(13, 36, 3, 8, p.o) + R(14, 36, 1, 7, p.f)
+            + R(3, 36, 10, 5, p.o) + R(4, 36, 8, 4, p.f) + R(6, 38, 4, 1, p.h)
+            // monitor de perfil
+            + R(5, 21, 6, 3, '#8f8b7b')
+            + R(3, 1, 9, 21, '#5c574a') + R(11, 4, 3, 16, '#5c574a')           // contorno (atrás o tubo afina)
+            + R(4, 2, 7, 8, '#f0ecdf') + R(11, 5, 2, 5, '#e6e2d4')             // tampa de cima
+            + R(4, 10, 7, 11, '#d8d4c4') + R(11, 10, 2, 9, '#bdb9a9')          // lateral
+            + R(4, 10, 7, 1, '#b9b5a5') + R(7, 13, 3, 1, '#9a9686') + R(7, 15, 3, 1, '#9a9686') + R(7, 17, 3, 1, '#9a9686')
+            + R(3, 3, 1, 18, '#222') + R(3, 5, 1, 14, '#2fb8aa')               // a tela, vista de quina
+            + R(5, 19, 1, 1, '#39ff14')
+            // teclado na frente da tela e a caneca no fundo da mesa
+            + R(1, 14, 2, 12, '#8f8b7b') + R(1, 14, 1, 12, '#e6e2d4')
+            + R(9, 25, 4, 4, '#8e2a1f') + R(9, 25, 4, 3, '#c0392b') + R(9, 25, 4, 1, '#e8766a') + R(13, 26, 1, 2, '#c0392b');
+        },
+        brilhos: () => [{ x: 3, y: 10, r: 14, cor: '#5fe0d0' }]
+      }
     },
 
     guardaroupa: {
@@ -769,18 +802,22 @@ window.Sprites = (function () {
     const chave = def.modelos[it.m] ? it.m : Object.keys(def.modelos)[0];
     return { chave, m: def.modelos[chave] };
   }
-  const giros = it => { const md = modeloDe(it); return !md || !md.m.girado ? 1 : md.m.costas ? 4 : 2; };
+  // O "girado" (de lado) e o "costas" ficam no modelo escolhido ou, em móveis sem modelos, no próprio móvel.
+  const fonteGiro = it => { const md = modeloDe(it); return md ? md.m : CATALOGO[it.id] || {}; };
+  const giros = it => { const g = fonteGiro(it); return !g.girado ? 1 : g.costas ? 4 : 2; };
 
   // Junta o móvel com o modelo escolhido e a direção para onde está virado.
   function forma(it) {
     const def = CATALOGO[it.id];
     if (!def) return null;
     const md = modeloDe(it);
-    if (!md) return def;
-    let f = Object.assign({}, def, md.m, { modelo: md.chave, espelhar: false });
+    if (!md && !def.girado) return def;
+    let f = md ? Object.assign({}, def, md.m, { modelo: md.chave, espelhar: false }) : Object.assign({}, def, { espelhar: false });
+    const g = fonteGiro(it);
     const d = direcaoDe(it) % giros(it);
-    if ((d === 1 || d === 3) && md.m.girado) f = Object.assign(f, md.m.girado, { espelhar: d === 3 });
-    if (d === 2 && md.m.costas) f.desenhar = md.m.costas;
+    f.direcao = d;
+    if ((d === 1 || d === 3) && g.girado) f = Object.assign(f, g.girado, { espelhar: d === 3 });
+    if (d === 2 && g.costas) { f.desenhar = g.costas; if (g.brilhosCostas !== undefined) f.brilhos = g.brilhosCostas; }
     return f;
   }
   const podeGirar = it => giros(it) > 1;

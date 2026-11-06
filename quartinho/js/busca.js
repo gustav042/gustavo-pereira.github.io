@@ -97,5 +97,35 @@ window.Busca = (function () {
     input.addEventListener('blur', () => setTimeout(fechar, 150));
   }
 
-  return { anexar };
+  // Seletor de temporada + episódio (com botão de próximo episódio) dentro de `caixa`.
+  // temps: [{ n, episodios }]; atual: { t, e } ou null; aoMudar(texto) recebe "Temporada X · Episódio Y".
+  function seletorEpisodio(caixa, temps, atual, aoMudar) {
+    if (!temps || !temps.length) { caixa.hidden = true; caixa.innerHTML = ''; return; }
+    const tIni = atual && temps.some(t => t.n === atual.t) ? atual.t : temps[0].n;
+    caixa.innerHTML = `
+      <label class="campo curto"><span>Temporada</span><select name="temporada">${temps.map(t => `<option value="${t.n}" ${t.n === tIni ? 'selected' : ''}>${t.n}</option>`).join('')}</select></label>
+      <label class="campo curto"><span>Episódio</span><select name="episodio"></select></label>
+      <button class="btn98" type="button" data-proximo-ep title="Pular pro próximo episódio">⏭ próximo ep.</button>`;
+    caixa.hidden = false;
+    const selT = caixa.querySelector('[name=temporada]'), selE = caixa.querySelector('[name=episodio]');
+    const preencherEps = e => {
+      const t = temps.find(x => String(x.n) === selT.value);
+      const total = (t && t.episodios) || 1;
+      selE.innerHTML = Array.from({ length: total }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+      selE.value = String(Math.min(Math.max(1, e || 1), total));
+    };
+    const avisar = () => aoMudar(`Temporada ${selT.value} · Episódio ${selE.value}`);
+    selT.onchange = () => { preencherEps(1); avisar(); };
+    selE.onchange = avisar;
+    caixa.querySelector('[data-proximo-ep]').onclick = () => {
+      const i = temps.findIndex(x => String(x.n) === selT.value);
+      if (Number(selE.value) < selE.options.length) selE.value = String(Number(selE.value) + 1);
+      else if (i < temps.length - 1) { selT.value = String(temps[i + 1].n); preencherEps(1); }
+      avisar();
+    };
+    preencherEps(atual && atual.t === tIni ? atual.e : 1);
+    avisar();
+  }
+
+  return { anexar, seletorEpisodio };
 })();

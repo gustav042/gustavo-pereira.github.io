@@ -15,7 +15,7 @@ window.Feed = (function () {
 
   // ---------- montando os acontecimentos ----------
   function eventos() {
-    const perfis = Object.values(Q().perfis());
+    const perfis = Object.values(Q().perfis()).filter(p => !p.soVisita);
     const porNome = Object.fromEntries(perfis.map(p => [p.nome, p]));
     const evs = [];
     for (const p of perfis) {
@@ -101,12 +101,12 @@ window.Feed = (function () {
   }
 
   function htmlTvs() {
-    const perfis = Object.values(Q().perfis()).filter(p => p.id !== 'eu' && p.assistindo && p.assistindo.titulo);
+    const perfis = Object.values(Q().perfis()).filter(p => p.id !== 'eu' && !p.soVisita && p.assistindo && p.assistindo.titulo);
     if (!perfis.length) return '';
     return `<section class="caixa-feed">
       <h2 class="titulo-caixa">📺 na TV dos amigos agora</h2>
       <div class="tvs">${perfis.map(p => {
-        const a = p.assistindo, prog = limitar(Number(a.progresso) || 0, 0, 100);
+        const a = p.assistindo, prog = window.Filmes.progressoDe(a);
         return `<a class="mini-tv" href="${Q().linkQuarto(p.id)}" title="Visitar o quartinho de ${esc(p.nome)}">
           <span class="mini-tv-tela"><b>${esc(a.titulo)}</b><small>${esc(a.detalhe)}</small><i style="width:${prog}%"></i></span>
           <span class="mini-tv-dono">${miniAvatar(p)} ${esc(p.nome)}</span>
@@ -138,7 +138,7 @@ window.Feed = (function () {
   }
 
   function htmlLateral() {
-    const perfis = Object.values(Q().perfis());
+    const perfis = Object.values(Q().perfis()).filter(p => !p.soVisita);
     const meu = eu();
     const amigos = perfis.filter(p => p.id !== 'eu');
     // status do MSN inventado (mas estável durante a hora)
@@ -169,6 +169,7 @@ window.Feed = (function () {
               <br><small class="compat-msn" title="compatibilidade de gosto com você">💞 ${window.Stats.compat(meu, p).pct}% compatível</small></span>
           </a></li>`;
         }).join('')}</ul>
+        <p class="msn-rodape"><button class="btn98" data-acao="amigos">👥 procurar amigos</button></p>
       </section>
       <section class="caixa">
         <div class="caixa-titulo">🔥 mais vistos pela galera</div>
@@ -183,25 +184,39 @@ window.Feed = (function () {
     if (!form) return;
     escolhaStatus = null;
     const seletor = form.querySelector('.seletor-episodio');
+    const porDetalhe = texto => { form.elements.detalhe.value = texto; };
     window.Busca.anexar(form.elements.titulo, {
       aoEscolher(det) {
         escolhaStatus = det;
         const temps = det.meta && det.meta.temporadas;
-        if (!temps || !temps.length) { seletor.hidden = true; seletor.innerHTML = ''; form.elements.detalhe.value = ''; return; }
-        seletor.innerHTML = `
-          <label class="campo curto"><span>Temporada</span><select name="temporada">${temps.map(t => `<option value="${t.n}">${t.n}</option>`).join('')}</select></label>
-          <label class="campo curto"><span>Episódio</span><select name="episodio"></select></label>`;
-        seletor.hidden = false;
-        const selT = seletor.querySelector('[name=temporada]'), selE = seletor.querySelector('[name=episodio]');
-        const preencherEps = () => {
-          const t = temps.find(x => String(x.n) === selT.value);
-          selE.innerHTML = Array.from({ length: (t && t.episodios) || 1 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
-        };
-        const atualizarDetalhe = () => { form.elements.detalhe.value = `Temporada ${selT.value} · Episódio ${selE.value}`; };
-        selT.onchange = () => { preencherEps(); atualizarDetalhe(); };
-        selE.onchange = atualizarDetalhe;
-        preencherEps(); atualizarDetalhe();
+        if (!temps || !temps.length) { form.elements.detalhe.value = ''; }
+        window.Busca.seletorEpisodio(seletor, temps, null, porDetalhe);
       }
+    });
+    // Já está vendo uma série? O formulário abre nela, no episódio atual (é só apertar "próximo ep.").
+    const a = eu().assistindo || {};
+    const meta = a.titulo && window.Filmes.metaDe(a);
+    // (sem episódio salvo ainda, começa no T1 · E1; nada é gravado até apertar "tô assistindo")
+    const mostrarSerie = m => {
+      escolhaStatus = { titulo: a.titulo, ano: '', meta: m };
+      window.Busca.seletorEpisodio(seletor, m.temporadas, window.Filmes.episodioDe(a.detalhe), porDetalhe);
+    };
+    if (meta && meta.temporadas && meta.temporadas.length) mostrarSerie(meta);
+    else if (a.titulo && !meta) {
+      // título digitado sem escolher da lista: procura a série pelo nome exato
+      window.Filmes.buscar(a.titulo, 'tudo').then(async res => {
+        const n = window.Filmes.norm(a.titulo);
+        const achou = res.find(x => x.tipo === 'serie' && window.Filmes.norm(x.titulo) === n);
+        if (!achou) return;
+        const det = await window.Filmes.detalhes(achou);
+        const form2 = document.getElementById('f-status');
+        if (form2 !== form || form.elements.titulo.value.trim() !== a.titulo) return; // a pessoa já mudou algo
+        if (det && det.meta && det.meta.temporadas && det.meta.temporadas.length) mostrarSerie(det.meta);
+      }).catch(() => { /* sem conexão: fica só o campo de texto */ });
+    }
+    // Trocou o título na mão (sem escolher da lista)? O seletor da série anterior some.
+    form.elements.titulo.addEventListener('input', () => {
+      if (escolhaStatus && form.elements.titulo.value.trim() !== escolhaStatus.titulo) { seletor.hidden = true; seletor.innerHTML = ''; }
     });
   }
 
@@ -279,6 +294,9 @@ window.Feed = (function () {
     } else {
       p.assistindo = { titulo, detalhe, progresso: anterior ? anterior.progresso : 0 };
       if (meta) p.assistindo.meta = meta;
+      // série: o progresso sai da temporada/episódio escolhidos
+      const auto = window.Filmes.progressoCalculado(p.assistindo);
+      if (auto !== null) p.assistindo.progresso = auto;
     }
     Q().salvar();
     pagina = 1;

@@ -1,0 +1,87 @@
+-- quartinho.net: banco no Supabase
+-- Cole tudo isto no "SQL Editor" do seu projeto Supabase e clique em "Run".
+-- A segurança vem das regras RLS (row level security) abaixo: a chave "anon" do site é pública,
+-- mas com essas regras cada pessoa só consegue mexer nas próprias coisas.
+
+-- ========== perfis: um por conta ==========
+create table if not exists public.perfis (
+  id uuid primary key references auth.users (id) on delete cascade,
+  usuario text not null unique
+    check (usuario ~ '^[a-z0-9_.]{3,20}$' and usuario <> 'eu'),
+  -- tudo do quartinho (móveis, blog, estante, diário...) fica num JSON só
+  dados jsonb not null default '{}'::jsonb
+    check (octet_length(dados::text) < 500000),
+  criado_em timestamptz not null default now(),
+  atualizado_em timestamptz not null default now()
+);
+alter table public.perfis enable row level security;
+
+drop policy if exists "perfis visíveis pra todos" on public.perfis;
+create policy "perfis visíveis pra todos" on public.perfis
+  for select using (true);
+drop policy if exists "cada um cria o seu" on public.perfis;
+create policy "cada um cria o seu" on public.perfis
+  for insert to authenticated with check (auth.uid() = id);
+drop policy if exists "cada um edita o seu" on public.perfis;
+create policy "cada um edita o seu" on public.perfis
+  for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
+drop policy if exists "cada um apaga o seu" on public.perfis;
+create policy "cada um apaga o seu" on public.perfis
+  for delete to authenticated using (auth.uid() = id);
+
+-- ========== recados no mural ==========
+create table if not exists public.recados (
+  id bigint generated always as identity primary key,
+  para uuid not null references public.perfis (id) on delete cascade,
+  de uuid not null references public.perfis (id) on delete cascade,
+  texto text not null check (char_length(texto) between 1 and 300),
+  criado_em timestamptz not null default now()
+);
+create index if not exists recados_para_idx on public.recados (para, criado_em desc);
+alter table public.recados enable row level security;
+
+drop policy if exists "recados visíveis" on public.recados;
+create policy "recados visíveis" on public.recados
+  for select using (true);
+drop policy if exists "recado só no próprio nome" on public.recados;
+create policy "recado só no próprio nome" on public.recados
+  for insert to authenticated with check (auth.uid() = de);
+drop policy if exists "apagar recado meu ou do meu mural" on public.recados;
+create policy "apagar recado meu ou do meu mural" on public.recados
+  for delete to authenticated using (auth.uid() = de or auth.uid() = para);
+
+-- ========== quem segue quem ==========
+create table if not exists public.seguindo (
+  seguidor uuid not null references public.perfis (id) on delete cascade,
+  seguido uuid not null references public.perfis (id) on delete cascade,
+  criado_em timestamptz not null default now(),
+  primary key (seguidor, seguido),
+  check (seguidor <> seguido)
+);
+create index if not exists seguindo_seguido_idx on public.seguindo (seguido);
+alter table public.seguindo enable row level security;
+
+drop policy if exists "ver quem segue quem" on public.seguindo;
+create policy "ver quem segue quem" on public.seguindo
+  for select using (true);
+drop policy if exists "seguir" on public.seguindo;
+create policy "seguir" on public.seguindo
+  for insert to authenticated with check (auth.uid() = seguidor);
+drop policy if exists "deixar de seguir" on public.seguindo;
+create policy "deixar de seguir" on public.seguindo
+  for delete to authenticated using (auth.uid() = seguidor);
+
+-- ========== imagens enviadas (pôsteres, fundo do blog, stickers) ==========
+-- cada pessoa só envia/apaga dentro da pasta com o próprio id
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('imagens', 'imagens', true, 2097152, array['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
+on conflict (id) do nothing;
+
+drop policy if exists "imagens: enviar na própria pasta" on storage.objects;
+create policy "imagens: enviar na própria pasta" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'imagens' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "imagens: apagar da própria pasta" on storage.objects;
+create policy "imagens: apagar da própria pasta" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'imagens' and (storage.foldername(name))[1] = auth.uid()::text);

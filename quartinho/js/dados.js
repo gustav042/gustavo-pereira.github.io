@@ -16,6 +16,14 @@ window.QUARTINHO_DADOS = {
       luz: 'dia',
       efeito: 'nenhum',
       musica: 'domingo',
+      blog: {
+        fundo: 'estrelas', cor1: '#14082e', cor2: '#ffffff', caixa: 'pixel', fonte: 'vt323', estiloTitulo: 'glitter',
+        stickers: [
+          { uid: 'se1', id: 'estrela', a: 'topo', x: 8, y: 50, s: 0.75, r: -15 },
+          { uid: 'se2', id: 'pipoca', a: 'quarto', x: 97, y: 4, s: 1, r: 12 },
+          { uid: 'se3', id: 'selo', texto: '♥ eu amo cinema ♥', e: 0, a: 'lateral', x: 70, y: 1.5, s: 1, r: 6 }
+        ]
+      },
       pet: { tipo: 'gato', cor: 'laranja', nome: 'Pipoca' },
       decorou: false,
 
@@ -85,6 +93,18 @@ window.QUARTINHO_DADOS = {
       luz: 'noite',
       efeito: 'vagalumes',
       musica: 'caixinha',
+      blog: {
+        fundo: 'glitter', cor1: '#1b0f3a', cor2: '#e7c6ff', caixa: 'vidro', fonte: 'comic', estiloTitulo: 'arcoiris',
+        titulo: '☾ ana no mundo da lua ☽', cursor: 'estrela', rastro: 'brilhos',
+        letreiro: 'insônia + filme de época = felicidade ~*~ deixa recado que eu respondo de madrugada',
+        stickers: [
+          { uid: 'sa1', id: 'lua', a: 'topo', x: 6, y: 50, s: 1, r: -10 },
+          { uid: 'sa2', id: 'estrela', a: 'quarto', x: 98, y: 3, s: 0.75, r: 15 },
+          { uid: 'sa3', id: 'coracao', a: 'lateral', x: 92, y: 2, s: 0.75, r: 10 },
+          { uid: 'sa4', id: 'cd', a: 'quarto', x: 2, y: 92, s: 1, r: 0 },
+          { uid: 'sa5', id: 'selo', texto: 'clube da insônia', e: 1, a: 'quarto', x: 90, y: 96, s: 1, r: -4 }
+        ]
+      },
       pet: { tipo: 'coelho', cor: 'branco', nome: 'Algodão' },
       decorou: true,
       quarto: [
@@ -139,6 +159,18 @@ window.QUARTINHO_DADOS = {
       luz: 'tarde',
       efeito: 'nenhum',
       musica: 'fliperama',
+      blog: {
+        fundo: 'grade', cor1: '#0b0b18', cor2: '#ffb000', caixa: 'neon', fonte: 'pixel', estiloTitulo: 'neon',
+        titulo: 'LUCAS.ROX', cursor: 'seta', rastro: 'estrelas',
+        letreiro: 'PRESS START ~*~ high score: 3 filmes do Tarantino seguidos ~*~ GAME OVER?? nunca',
+        stickers: [
+          { uid: 'sl1', id: 'controle', a: 'topo', x: 22, y: 50, s: 1, r: -12 },
+          { uid: 'sl2', id: 'alien', a: 'quarto', x: 97, y: 5, s: 1, r: 10 },
+          { uid: 'sl3', id: 'raio', a: 'topo', x: 78, y: 50, s: 0.75, r: 15 },
+          { uid: 'sl4', id: 'disquete', a: 'lateral', x: 90, y: 1.5, s: 0.75, r: 8 },
+          { uid: 'sl5', id: 'selo', texto: 'GAME OVER', e: 2, a: 'quarto', x: 8, y: 96, s: 1, r: -6 }
+        ]
+      },
       pet: { tipo: 'cachorro', cor: 'caramelo', nome: 'Bolacha' },
       decorou: true,
       quarto: [
@@ -193,6 +225,18 @@ window.QUARTINHO_DADOS = {
       luz: 'dia',
       efeito: 'brilhos',
       musica: 'chuva',
+      blog: {
+        fundo: 'nuvens', cor1: '#8fd3ff', cor2: '#ffffff', caixa: 'fofo', fonte: 'comic', estiloTitulo: 'onda',
+        titulo: 'bia ♥ sitcoms', cursor: 'coracao', rastro: 'coracoes',
+        stickers: [
+          { uid: 'sb1', id: 'arcoiris', a: 'topo', x: 18, y: 50, s: 1, r: -8 },
+          { uid: 'sb2', id: 'nuvem', a: 'quarto', x: 96, y: 4, s: 1, r: 0 },
+          { uid: 'sb3', id: 'smiley', a: 'lateral', x: 92, y: 1.5, s: 0.75, r: 12 },
+          { uid: 'sb4', id: 'pipoca', a: 'quarto', x: 3, y: 93, s: 0.75, r: -10 },
+          { uid: 'sb5', id: 'flor', a: 'topo', x: 82, y: 50, s: 0.75, r: 10 },
+          { uid: 'sb6', id: 'selo', texto: 'pipoca doce sim', e: 1, a: 'quarto', x: 90, y: 96, s: 1, r: 3 }
+        ]
+      },
       pet: { tipo: 'hamster', cor: 'dourado', nome: 'Paçoca' },
       decorou: true,
       quarto: [
@@ -248,6 +292,17 @@ window.QUARTINHO_DADOS = {
       luz: 'tarde',
       efeito: 'nenhum',
       musica: 'domingo',
+      blog: {
+        fundo: 'diagonal', cor1: '#2b1a12', cor2: '#35211a', caixa: 'win98', fonte: 'courier', estiloTitulo: 'tres',
+        titulo: 'videolocadora do joão', cursor: 'padrao', rastro: 'nenhum',
+        letreiro: 'devolução até as 18h ~*~ seja gentil, rebobine ~*~ promoção: leve 3 pague 2',
+        stickers: [
+          { uid: 'sj1', id: 'vhs', a: 'topo', x: 10, y: 50, s: 1, r: -10 },
+          { uid: 'sj2', id: 'claquete', a: 'quarto', x: 97, y: 4, s: 1, r: 12 },
+          { uid: 'sj3', id: 'oculos', a: 'lateral', x: 88, y: 1.5, s: 1, r: -8 },
+          { uid: 'sj4', id: 'selo', texto: 'seja gentil, rebobine', e: 4, a: 'quarto', x: 10, y: 96, s: 1, r: -5 }
+        ]
+      },
       pet: { tipo: 'gato', cor: 'preto', nome: 'Breu' },
       decorou: true,
       quarto: [

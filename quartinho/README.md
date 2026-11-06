@@ -25,6 +25,30 @@ catálogo de exemplo (offline). Para conectar:
 Sem um servidor, a chave fica visível no navegador. Para estudo tudo bem; para publicar, coloque um
 servidor no meio. Créditos ao TMDB ficam no rodapé, como os termos de uso pedem.
 
+## Contas de verdade (Supabase)
+
+O site é estático (funciona no GitHub Pages). As contas, os perfis, os recados e as imagens ficam no
+[Supabase](https://supabase.com), que o navegador acessa direto. Sem configurar, o site roda no **modo
+demonstração** (tudo só no seu navegador, com amigos de exemplo).
+
+1. Crie uma conta grátis em supabase.com e um **New project** (região *South America (São Paulo)*).
+   Guarde a senha do banco que ele pede.
+2. Abra **SQL Editor → New query**, cole todo o arquivo `supabase/schema.sql` e clique em **Run**.
+   Isso cria as tabelas (`perfis`, `recados`, `seguindo`), o espaço de imagens e as regras de segurança.
+3. Em **Authentication → URL Configuration**:
+   - *Site URL*: `https://gustavo-pereira.github.io/quartinho/`
+   - *Redirect URLs*: adicione também `http://127.0.0.1:5173/**` (pra testar no computador).
+   É pra onde o link de confirmação do email leva a pessoa.
+4. Em **Project Settings → API Keys**, aba **Legacy API Keys**, copie a chave *anon public* (começa com
+   `eyJ`) para `js/supabase-config.js`, junto com a URL `https://<id-do-projeto>.supabase.co`. Essa chave pode ir pro GitHub: quem protege os dados são as regras do banco.
+   **Nunca** coloque a chave `service_role` no site.
+
+Depois disso aparece **👤 Entrar** no topo: dá pra criar conta (levando o quartinho do navegador junto),
+procurar amigos pelo @usuario, seguir, visitar e deixar recados. O perfil salva sozinho na nuvem.
+
+Observação: no plano grátis, o Supabase pausa o projeto depois de uma semana sem nenhum acesso
+(é só entrar no painel e reativar).
+
 ## O que já tem
 
 - **Estatísticas (📊)**: gêneros favoritos, décadas, horas de filme, notas comparadas com a média do mundo,
@@ -43,7 +67,13 @@ servidor no meio. Créditos ao TMDB ficam no rodapé, como os termos de uso pede
   efeitos (neve, corações, brilhinhos, vaga-lumes) e música do quarto.
 - **Bichinho**: gato, cachorro, coelho ou hamster, com cor e nome. Ele anda pelo quarto desviando dos móveis; clique pra fazer carinho.
 - **Rádio**: 4 músicas chiptune originais, geradas com a Web Audio API (sem arquivos de áudio).
-- **Amigos**: dois quartos de exemplo (ana_luz e lucas.rox) pra visitar, cada um com uma vibe.
+- **Blog personalizável (🎨)**: temas prontos, fundo da página (padrões em pixel, degradê, cor lisa ou imagem
+  enviada), estilo das caixas (pixel, Windows 98, fofinho, neon, caderno, vidro Y2K), fonte, título animado
+  (glitter, arco-íris, neon, 3D, ondinha), letreiro, cursor e rastro do mouse.
+- **Stickers**: pixel art original, selinhos estilo "blinkie" (prontos ou com seu texto) e stickers com sua imagem.
+  Dá pra arrastar, girar e mudar o tamanho; cada um fica preso no pedaço da página onde foi solto
+  (título, quarto ou lateral), então continua no lugar certo no celular.
+- **Amigos**: quatro quartos de exemplo pra visitar, cada um com uma vibe e um blog diferente.
 
 Os dados ficam no `localStorage` do navegador (ainda não há servidor/contas).
 
@@ -58,6 +88,10 @@ quartinho/
   js/sprites.js     catálogo de móveis e bichinhos em pixel art
   js/musica.js      rádio chiptune
   js/feed.js        feed (início)
+  js/blog.js        tema do blog (fundo, caixas, título, cursor) e stickers
+  js/conta.js       contas no Supabase (login, perfis, recados, seguir, imagens)
+  js/supabase-config.js  endereço e chave pública do projeto Supabase
+  supabase/schema.sql    tabelas e regras de segurança do banco
   js/app.js         quarto, arrastar móveis, bichinho, janelas, navegação
   assets/           sprites/imagens de terceiros (ver abaixo)
 ```

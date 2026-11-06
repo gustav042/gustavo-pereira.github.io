@@ -107,6 +107,37 @@ window.Filmes = (function () {
     return e ? metaExemplo(e) : null;
   }
 
+  // Progresso (0–100) de quem está vendo uma série: episódios até o atual / total de episódios.
+  // Lê "Temporada 3 · Episódio 7" (ou "T3 E7") do detalhe. Sem temporadas conhecidas, usa o número salvo.
+  // progressoCalculado devolve null quando não dá pra calcular (filme, série sem temporadas, detalhe livre).
+  // Lê temporada e episódio de "Temporada 3 · Episódio 7" ou "T3 E7". Devolve { t, e } ou null.
+  function episodioDe(detalhe) {
+    const det = String(detalhe || '');
+    const m = /temporada\s*(\d+)\D+?epis[oó]dio\s*(\d+)/i.exec(det) || /\bT\s*(\d+)\s*[·.,\-]?\s*E[Pp]?\s*(\d+)/.exec(det);
+    return m ? { t: Number(m[1]), e: Number(m[2]) } : null;
+  }
+  function progressoCalculado(a) {
+    if (!a || !a.titulo) return null;
+    const meta = metaDe(a);
+    const temps = meta && meta.temporadas;
+    const ep = episodioDe(a.detalhe);
+    if (!temps || !temps.length || !ep) return null;
+    const { t, e } = ep;
+    let antes = 0, total = 0;
+    for (const s of temps) {
+      const n = Number(s.episodios) || 0;
+      total += n;
+      if (s.n < t) antes += n;
+    }
+    if (!total) return null;
+    return Math.round(Math.max(0, Math.min(100, (antes + e) / total * 100)));
+  }
+  function progressoDe(a) {
+    if (!a || !a.titulo) return 0;
+    const calc = progressoCalculado(a);
+    return calc !== null ? calc : Math.max(0, Math.min(100, Number(a.progresso) || 0));
+  }
+
   // ---------- busca ----------
   async function buscar(texto, tipos = 'tudo') {
     texto = String(texto || '').trim();
@@ -168,5 +199,5 @@ window.Filmes = (function () {
     try { await chamar('/configuration'); return true; } catch (e) { definirChave(antes); throw e; }
   }
 
-  return { metaDe, buscar, detalhes, temChave, chave, definirChave, testar, norm };
+  return { metaDe, progressoDe, progressoCalculado, episodioDe, buscar, detalhes, temChave, chave, definirChave, testar, norm };
 })();

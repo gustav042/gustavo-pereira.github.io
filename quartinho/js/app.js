@@ -29,6 +29,7 @@
     { icone: '🐾', nome: 'Melhor amigo', desc: 'Tem um bichinho no quarto', ok: p => !!(p.pet && PETS[p.pet.tipo]) },
     { icone: '⏳', nome: 'Viajante do tempo', desc: 'Filmes de 5 décadas diferentes', ok: p => new Set(p.assistidos.filter(f => Number(f.ano)).map(f => Math.floor(f.ano / 10))).size >= 5 },
     { icone: '🌍', nome: 'Poliglota', desc: 'Filmes de 5 países diferentes', ok: p => new Set(p.assistidos.flatMap(f => (window.Filmes.metaDe(f) || {}).pais || [])).size >= 5 },
+    { icone: '✨', nome: 'Estiloso', desc: 'Personalizou o próprio blog', ok: p => !!(p.blog && p.blog.personalizou) },
     { icone: '🎨', nome: 'Eclético', desc: 'Viu 8 gêneros diferentes', ok: p => new Set(p.assistidos.flatMap(f => (window.Filmes.metaDe(f) || {}).generos || [])).size >= 8 }
   ];
 
@@ -57,6 +58,8 @@
   }
   // Devolve false se o navegador não deixou salvar (ex.: armazenamento cheio).
   function salvar() {
+    if (window.Conta.logado() && perfis.eu && perfis.eu.uid) { window.Conta.salvarPerfil(dadosParaBanco(perfis.eu)); return true; }
+    if (perfis.eu && perfis.eu.uid) return true; // perfil da nuvem sem sessão: não mistura com o modo demo
     try { localStorage.setItem(CHAVE, JSON.stringify({ perfis })); return true; } catch (e) { return false; }
   }
 
@@ -125,6 +128,8 @@
     <linearGradient id="grad-tv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="stop-tv" stop-color="#7fb8ff" stop-opacity=".9"/><stop offset=".55" class="stop-tv" stop-color="#7fb8ff" stop-opacity=".3"/><stop offset="1" class="stop-tv" stop-color="#7fb8ff" stop-opacity="0"/></linearGradient>
     <radialGradient id="grad-tv-r"><stop offset="0" class="stop-tv" stop-color="#7fb8ff" stop-opacity=".9"/><stop offset="1" class="stop-tv" stop-color="#7fb8ff" stop-opacity="0"/></radialGradient>
     <linearGradient id="grad-pc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fe0d0" stop-opacity=".9"/><stop offset=".5" stop-color="#5fe0d0" stop-opacity=".3"/><stop offset="1" stop-color="#5fe0d0" stop-opacity="0"/></linearGradient>
+    <linearGradient id="grad-pc-e" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#5fe0d0" stop-opacity=".9"/><stop offset=".5" stop-color="#5fe0d0" stop-opacity=".3"/><stop offset="1" stop-color="#5fe0d0" stop-opacity="0"/></linearGradient>
+    <linearGradient id="grad-pc-d" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5fe0d0" stop-opacity=".9"/><stop offset=".5" stop-color="#5fe0d0" stop-opacity=".3"/><stop offset="1" stop-color="#5fe0d0" stop-opacity="0"/></linearGradient>
     <pattern id="fl-tatame" width="32" height="16" patternUnits="userSpaceOnUse"><rect width="32" height="16" fill="#c8c07a"/><rect width="32" height="1" fill="#6b6b3a"/><rect width="1" height="16" fill="#6b6b3a"/><rect y="4" width="32" height="1" fill="#b8b06a"/><rect y="8" width="32" height="1" fill="#b8b06a"/><rect y="12" width="32" height="1" fill="#b8b06a"/></pattern>`;
 
   // ================= o quarto =================
@@ -145,7 +150,8 @@
   function svgItem(it, ctx, brilhos) {
     const f = forma(it);
     const pos = posArte(it);
-    if (f.brilhos) f.brilhos(ctx, it).forEach(b => brilhos.push({ x: pos.x + b.x, y: pos.y + b.y, r: b.r, cor: b.cor }));
+    // móvel espelhado (virado pra direita): o brilho também troca de lado
+    if (f.brilhos) f.brilhos(ctx, it).forEach(b => brilhos.push({ x: pos.x + (f.espelhar ? f.w - b.x : b.x), y: pos.y + b.y, r: b.r, cor: b.cor }));
     return `<g ${attrsItem(it, ctx)} transform="translate(${pos.x},${pos.y})">${window.Sprites.arte(it, ctx)}</g>`;
   }
 
@@ -176,8 +182,16 @@
           <circle class="luz-tv" fill="url(#grad-tv-r)" cx="${sx + 5.5}" cy="${sy + 4}" r="${noite ? 18 : 12}" opacity="${noite ? 0.55 : 0.3}"/>`;
       }
       if (it.id === 'pc') {
-        const sx = pos.x + 9, sy = pos.y + 4, chao = baseDe(it);
-        s += `<polygon class="luz-pc" fill="url(#grad-pc)" points="${sx},${sy + 6} ${sx + 9},${sy + 6} ${sx + 22},${chao + 18} ${sx - 13},${chao + 18}" opacity="${noite ? 0.45 : 0.16}"/>`;
+        const f = forma(it), op = noite ? 0.45 : 0.16;
+        if (f.direcao === 1 || f.direcao === 3) {
+          // de lado: a luz sai pela lateral, pra onde a tela está virada
+          const lado = f.direcao === 1 ? -1 : 1;
+          const sx = f.direcao === 1 ? pos.x + 3 : pos.x + f.w - 3, sy = pos.y + 5;
+          s += `<polygon class="luz-pc" fill="url(#grad-pc-${lado < 0 ? 'e' : 'd'})" points="${sx},${sy} ${sx},${sy + 11} ${sx + lado * 24},${sy + 30} ${sx + lado * 24},${sy - 2}" opacity="${op}"/>`;
+        } else if (f.direcao !== 2) {
+          const sx = pos.x + 9, sy = pos.y + 4, chao = baseDe(it);
+          s += `<polygon class="luz-pc" fill="url(#grad-pc)" points="${sx},${sy + 6} ${sx + 9},${sy + 6} ${sx + 22},${chao + 18} ${sx - 13},${chao + 18}" opacity="${op}"/>`;
+        }
       }
     }
     return s;
@@ -489,7 +503,7 @@
     const p = perfil();
     const a = p.assistindo || {};
     const img = urlSegura(p.avatar);
-    const prog = limitar(Number(a.progresso) || 0, 0, 100);
+    const prog = window.Filmes.progressoDe(a);
     const amigos = Object.values(perfis).filter(x => x.id !== atualId);
     document.getElementById('lateral').innerHTML = `
       <div class="caixa">
@@ -536,7 +550,8 @@
       </div>
       ${ehMeu() ? `
         <button class="btn98 btn-lateral" data-acao="arrumar">🪑 Arrumar móveis</button>
-        <button class="btn98 btn-lateral" data-acao="decorar">🖌️ Decorar e mudar a vibe</button>`
+        <button class="btn98 btn-lateral" data-acao="decorar">🖌️ Decorar e mudar a vibe</button>
+        <button class="btn98 btn-lateral" data-acao="blog">🎨 Personalizar meu blog</button>`
         : `<button class="btn98 btn-lateral" data-visitar="eu">🏠 Voltar pro meu quarto</button>`}`;
   }
 
@@ -547,14 +562,16 @@
     renderQuarto();
     renderLateral();
     const a = p.assistindo || {};
-    document.getElementById('letreiro-texto').textContent =
+    const letreiroProprio = window.Blog.letreiroDe(p);
+    document.getElementById('letreiro-texto').textContent = letreiroProprio ? `~*~ ${letreiroProprio} ~*~` :
       `~*~ bem-vindo(a) ao quartinho de ${p.nome}!!! ~*~ ` +
       (a.titulo ? `assistindo agora: ${a.titulo} ~*~ ` : '') +
       `deixe um recado no mural ~*~ ${(p.assistidos || []).length} filmes na estante ~*~`;
     atualizarSomTV();
     const aviso = document.getElementById('visitando');
     aviso.hidden = ehMeu();
-    aviso.innerHTML = ehMeu() ? '' : `🚪 você está visitando o quartinho de <b>${esc(p.nome)}</b>`;
+    aviso.innerHTML = ehMeu() ? '' : `🚪 você está visitando o quartinho de <b>${esc(p.nome)}</b>${p.usuario ? ` <small>@${esc(p.usuario)}</small>` : ''} ${btnSeguir(p)}`;
+    if (tela === 'quarto') window.Blog.aplicar(p);
   }
 
   function mudou() { salvar(); renderTudo(); atualizarArrumar(); }
@@ -817,7 +834,7 @@
       titulo: '📺 Na TV agora', largura: 440,
       html() {
         const a = perfil().assistindo || {};
-        const prog = limitar(Number(a.progresso) || 0, 0, 100);
+        const prog = window.Filmes.progressoDe(a);
         return a.titulo ? `
           <div class="tela-crt">
             <div class="canal">CANAL 03 ▸ AO VIVO</div>
@@ -897,7 +914,7 @@
           </table>
           <form class="form98" id="f-recado">
             <fieldset><legend>Deixe um recado!</legend>
-              ${campo('Seu nome', 'de', ehMeu() ? '' : perfis.eu.nome, 'text', 'required maxlength="30"')}
+              ${estadoConta === 'dentro' ? `<p>recado como <b>@${esc(perfis.eu.usuario)}</b></p>` : campo('Seu nome', 'de', ehMeu() ? '' : perfis.eu.nome, 'text', 'required maxlength="30"')}
               <label class="campo"><span>Recado</span><textarea name="texto" required maxlength="300"></textarea></label>
               <button class="btn98" type="submit">Colar no mural</button>
             </fieldset>
@@ -908,7 +925,15 @@
         corpo.onsubmit = e => {
           e.preventDefault();
           const fd = new FormData(e.target);
-          perfil().recados.unshift({ de: String(fd.get('de')).trim(), texto: String(fd.get('texto')).trim(), data: hoje() });
+          const texto = String(fd.get('texto')).trim();
+          if (estadoConta === 'dentro' && perfil().uid) {
+            const alvo = perfil();
+            window.Conta.enviarRecado(alvo.uid, texto)
+              .then(r => { alvo.recados.unshift(recadoDaLinha(r)); renderTudo(); redesenhar(); })
+              .catch(err => avisar('⚠ ' + err.message));
+            return;
+          }
+          perfil().recados.unshift({ de: String(fd.get('de')).trim(), texto, data: hoje() });
           mudou(); redesenhar();
         };
       }
@@ -1010,7 +1035,10 @@
               <span class="msg" role="status">${tem ? '✔ conectado' : 'usando o catálogo de exemplo'}</span>
             </p>
           </form>
-          <p><small>A chave fica guardada só neste navegador. Não compartilhe a sua chave com ninguém.</small></p>`;
+          <p><small>${estadoConta === 'dentro'
+            ? 'A chave fica guardada na sua conta (só você vê) e volta sozinha quando você entra em outro navegador.'
+            : 'Sem conta, a chave fica guardada só neste navegador (e neste endereço). Entrando na sua conta, ela vai junto pra qualquer navegador.'}
+            Não compartilhe a sua chave com ninguém.</small></p>`;
       },
       bind(corpo, redesenhar) {
         corpo.onsubmit = async e => {
@@ -1021,6 +1049,8 @@
           msg.textContent = 'testando...';
           try {
             await window.Filmes.testar(valor);
+            atualizarRodapeTmdb();
+            if (estadoConta === 'dentro') window.Conta.guardarPreferencia('tmdbChave', valor).catch(err => avisar('⚠ não guardei a chave na conta: ' + err.message));
             redesenhar();
             corpo.querySelector('.msg').textContent = '✔ conectado! a busca agora usa o TMDB';
             if (tela === 'stats') rota();
@@ -1031,6 +1061,8 @@
         corpo.onclick = e => {
           if (!e.target.closest('[data-desconectar]')) return;
           window.Filmes.definirChave('');
+          atualizarRodapeTmdb();
+          if (estadoConta === 'dentro') window.Conta.guardarPreferencia('tmdbChave', null).catch(err => avisar('⚠ ' + err.message));
           redesenhar();
           if (tela === 'stats') rota();
         };
@@ -1073,7 +1105,19 @@
             <div class="linha">${campo('Nome', 'nome', p.nome, 'text', 'required maxlength="30"')}${campo('Humor', 'humor', p.humor, 'text', 'maxlength="40"')}</div>
             <div class="linha">${campo('Cidade', 'cidade', p.cidade, 'text', 'maxlength="40"')}
               <label class="campo curto"><span>Cor do perfil</span><input type="color" name="corDestaque" value="${corValida(p.corDestaque, '#ff66cc')}"></label></div>
-            ${campo('Foto (link da imagem, opcional)', 'avatar', p.avatar, 'text', 'placeholder="https://... ou assets/foto.png"')}
+            <div class="poster-imagem">
+              <div class="previa-avatar">${urlSegura(p.avatar) ? `<img src="${esc(urlSegura(p.avatar))}" alt="Sua foto">` : avatarPadrao(p)}</div>
+              <div class="poster-imagem-campos">
+                <span>Foto do perfil</span>
+                <input type="hidden" name="avatar" value="${esc(p.avatar)}">
+                <label class="btn98 botao-arquivo">📁 Enviar foto
+                  <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" data-upload-avatar>
+                </label>
+                ${p.avatar ? '<button class="btn98" type="button" data-tirar-avatar>Remover foto</button>' : ''}
+                ${campo('ou cole um link', 'avatar_link', ehUpload(p.avatar) ? '' : p.avatar, 'text', 'placeholder="https://... ou assets/foto.png" data-avatar-link')}
+                <small class="aviso-upload" data-aviso="avatar" role="status"></small>
+              </div>
+            </div>
             <label class="campo"><span>Sobre mim</span><textarea name="sobre" maxlength="500">${esc(p.sobre)}</textarea></label>
           </fieldset>
           ${p.posteres.map((po, i) => `
@@ -1096,9 +1140,14 @@
               ${campo('Por que é favorito?', `p${i}_motivo`, po.motivo, 'text', 'maxlength="140"')}
             </fieldset>`).join('')}
           <fieldset><legend>Na TV agora</legend>
-            <div class="linha">${campo('Título', 'tv_titulo', a.titulo, 'text', 'maxlength="60"')}${campo('Detalhe', 'tv_detalhe', a.detalhe, 'text', 'maxlength="60" placeholder="T1 · E05"')}</div>
-            <label class="campo"><span>Progresso: <output name="tv_saida">${limitar(Number(a.progresso) || 0, 0, 100)}</output>%</span>
-              <input type="range" name="tv_progresso" min="0" max="100" value="${limitar(Number(a.progresso) || 0, 0, 100)}"></label>
+            <div class="linha">${campo('Título (digite pra buscar)', 'tv_titulo', a.titulo, 'text', 'maxlength="60"')}${campo('Detalhe', 'tv_detalhe', a.detalhe, 'text', 'maxlength="60" placeholder="T1 · E05"')}</div>
+            <div class="linha seletor-episodio" data-seletor-tv hidden></div>
+            ${(() => {
+              const auto = window.Filmes.progressoCalculado(a);
+              return `<label class="campo"><span>Progresso: <output name="tv_saida">${window.Filmes.progressoDe(a)}</output>%
+                ${auto !== null ? '<small>(calculado pela temporada e episódio)</small>' : ''}</span>
+                <input type="range" name="tv_progresso" min="0" max="100" value="${window.Filmes.progressoDe(a)}" ${auto !== null ? 'disabled' : ''}></label>`;
+            })()}
           </fieldset>
           <div class="linha">
             <button class="btn98" type="button" data-restaurar>Restaurar padrão</button>
@@ -1121,7 +1170,28 @@
             }
           });
         });
-        window.Busca.anexar(form.elements.tv_titulo, { aoEscolher() { salvarForm(); } });
+        escolhaTv = null;
+        window.Busca.anexar(form.elements.tv_titulo, { aoEscolher(det) { escolhaTv = det; salvarForm(); redesenhar(); } });
+        // série com temporadas conhecidas: escolhe temporada/episódio em vez de digitar
+        {
+          const a = perfil().assistindo || {};
+          const meta = a.titulo && window.Filmes.metaDe(a);
+          const atual = window.Filmes.episodioDe(a.detalhe);
+          const acabouDeEscolher = escolhaTv && escolhaTv.titulo === a.titulo;
+          let pronto = !atual && acabouDeEscolher; // série nova: já grava "Temporada 1 · Episódio 1"
+          if (meta && meta.temporadas && meta.temporadas.length && (atual || acabouDeEscolher || !String(a.detalhe || '').trim())) {
+            window.Busca.seletorEpisodio(corpo.querySelector('[data-seletor-tv]'), meta.temporadas, atual, texto => {
+              if (!pronto) return;
+              form.elements.tv_detalhe.value = texto;
+              salvarForm();
+              const a2 = perfil().assistindo;
+              form.elements.tv_saida.value = window.Filmes.progressoDe(a2);
+              form.elements.tv_progresso.value = window.Filmes.progressoDe(a2);
+              form.elements.tv_progresso.disabled = window.Filmes.progressoCalculado(a2) !== null;
+            });
+          }
+          pronto = true;
+        }
         form.onsubmit = e => e.preventDefault();
         const aviso = (i, texto) => { const a = corpo.querySelector(`[data-aviso="${i}"]`); if (a) a.textContent = texto; };
         const salvarForm = () => {
@@ -1137,7 +1207,7 @@
             if (!arquivo) return;
             aviso(i, 'carregando...');
             try {
-              const dados = await imagemParaPoster(arquivo);
+              const dados = await guardarImagem(await imagemParaPoster(arquivo));
               const antes = form.elements[`p${i}_imagem`].value;
               form.elements[`p${i}_imagem`].value = dados;
               if (salvarForm()) { redesenhar(); }
@@ -1147,11 +1217,41 @@
             }
             return;
           }
+          if (t.dataset.uploadAvatar !== undefined) {
+            const arquivo = t.files && t.files[0];
+            if (!arquivo) return;
+            aviso('avatar', 'carregando...');
+            try {
+              // recorta quadrado, 128x128 (o tamanho da caixa de perfil)
+              const dados = await guardarImagem(await imagemParaPoster(arquivo, 128, 128));
+              const antes = form.elements.avatar.value;
+              form.elements.avatar.value = dados;
+              if (salvarForm()) { redesenhar(); }
+              else { form.elements.avatar.value = antes; aplicarDecorar(form); aviso('avatar', '⚠ sem espaço no navegador pra essa imagem'); }
+            } catch (err) {
+              aviso('avatar', '⚠ ' + err.message);
+            }
+            return;
+          }
+          if (t.dataset.avatarLink !== undefined) form.elements.avatar.value = t.value.trim();
           if (t.dataset.link !== undefined) form.elements[`p${t.dataset.link}_imagem`].value = t.value.trim();
           if (t.name === 'pet_tipo') form.elements.pet_cor.innerHTML = opcoesCorPet(t.value);
           salvarForm();
+          if (t.name === 'tv_titulo' || t.name === 'tv_detalhe') {
+            // a barra de progresso passa a ser automática quando dá pra calcular pela temporada/episódio
+            const a = perfil().assistindo;
+            const auto = window.Filmes.progressoCalculado(a);
+            form.elements.tv_saida.value = window.Filmes.progressoDe(a);
+            form.elements.tv_progresso.value = window.Filmes.progressoDe(a);
+            form.elements.tv_progresso.disabled = auto !== null;
+          }
         };
         corpo.onclick = e => {
+          if (e.target.closest('[data-tirar-avatar]')) {
+            form.elements.avatar.value = '';
+            salvarForm(); redesenhar();
+            return;
+          }
           const tirar = e.target.closest('[data-tirar-imagem]');
           if (tirar) {
             form.elements[`p${tirar.dataset.tirarImagem}_imagem`].value = '';
@@ -1165,7 +1265,7 @@
           }
           if (!e.target.closest('[data-restaurar]')) return;
           if (!confirm('Voltar seu quarto para o padrão? Isso apaga suas mudanças.')) return;
-          perfis.eu = clonar(window.QUARTINHO_DADOS.perfis.eu);
+          { const antes = perfis.eu; perfis.eu = clonar(window.QUARTINHO_DADOS.perfis.eu); if (antes.uid) Object.assign(perfis.eu, { id: "eu", uid: antes.uid, usuario: antes.usuario, recados: antes.recados }); }
           Pet.estado = null;
           mudou(); redesenhar();
         };
@@ -1173,12 +1273,15 @@
     }
   };
 
+  JANELAS.blog = window.Blog.janela({ perfil, salvar, renderTudo: () => { renderTudo(); atualizarArrumar(); }, guardarImagem: d => guardarImagem(d) });
+
   function opcoesCorPet(tipo, atual) {
     const t = PETS[tipo];
     if (!t) return '<option value="">—</option>';
     return Object.entries(t.cores).map(([k, c]) => `<option value="${k}" ${k === atual ? 'selected' : ''}>${esc(c.nome)}</option>`).join('');
   }
 
+  let escolhaTv = null; // série/filme escolhido na busca do campo "Na TV agora"
   function aplicarDecorar(form) {
     const p = perfil();
     const fd = new FormData(form);
@@ -1205,7 +1308,14 @@
       imagem: s(`p${i}_imagem`),
       motivo: s(`p${i}_motivo`)
     }));
-    p.assistindo = { titulo: s('tv_titulo'), detalhe: s('tv_detalhe'), progresso: Number(s('tv_progresso')) || 0 };
+    // mantém as informações da série (temporadas) se o título não mudou
+    const tvAntes = p.assistindo || {};
+    const tvNovo = { titulo: s('tv_titulo'), detalhe: s('tv_detalhe'), progresso: Number(s('tv_progresso')) || 0 };
+    if (tvAntes.meta && tvAntes.titulo === tvNovo.titulo) tvNovo.meta = tvAntes.meta;
+    if (escolhaTv && escolhaTv.titulo === tvNovo.titulo && escolhaTv.meta) tvNovo.meta = escolhaTv.meta;
+    const auto = window.Filmes.progressoCalculado(tvNovo);
+    if (auto !== null) tvNovo.progresso = auto;
+    p.assistindo = tvNovo;
     p.decorou = true;
     if (musicaAntes !== p.musica && window.Musica.tocando()) {
       if (window.Musica.FAIXAS[p.musica]) window.Musica.tocar(p.musica); else window.Musica.parar();
@@ -1331,6 +1441,7 @@
   function rota() {
     const partes = decodeURIComponent(location.hash.replace(/^#/, '')).split('/');
     if (partes[0] === 'quarto') {
+      if (partes[1] && partes[1] !== 'eu' && !perfis[partes[1]] && estadoConta === 'dentro') { visitarRemoto(partes[1], partes[2]); return; }
       const id = perfis[partes[1]] ? partes[1] : 'eu';
       mostrarTela('quarto');
       if (id !== atualId) visitar(id); else renderTudo();
@@ -1341,7 +1452,8 @@
     // fora do quarto: bichinho para, janelas do quarto fecham, som da TV desliga
     const sairDoQuarto = () => {
       cancelAnimationFrame(Pet.raf);
-      document.querySelectorAll('.janela:not(#jan-tmdb)').forEach(fecharJanela);
+      window.Blog.limpar();
+      document.querySelectorAll('.janela:not(#jan-tmdb):not(#jan-conta):not(#jan-amigos)').forEach(fecharJanela);
       atualizarSomTV();
     };
     if (partes[0] === 'stats') {
@@ -1366,6 +1478,290 @@
   }
   window.addEventListener('hashchange', rota);
 
+  // ================= contas (Supabase) =================
+  // Sem conta: modo demonstração (localStorage + amigos de exemplo).
+  // Com conta: "eu" é o meu perfil do banco e os outros são quem eu sigo (a chave no mapa é o @usuario).
+  const Conta = window.Conta;
+  let seguindo = new Set();
+  let estadoConta = Conta.configurado ? 'carregando' : 'demo'; // demo | carregando | fora | dentro
+
+  function perfilNovo(nome) {
+    const p = clonar(window.QUARTINHO_DADOS.perfis.eu);
+    Object.assign(p, {
+      nome, humor: '✨ novo por aqui', cidade: '', sobre: 'acabei de me mudar pro quartinho.net!', avatar: '',
+      assistidos: [], listas: [], diario: [], recados: [], decorou: false,
+      assistindo: { titulo: '', detalhe: '', progresso: 0 }
+    });
+    p.posteres = (p.posteres || []).map(() => ({ titulo: '', ano: '', cor: '#444444', imagem: '', motivo: '' }));
+    return p;
+  }
+  // O que vai pro banco: o perfil sem os campos que o próprio banco guarda.
+  function dadosParaBanco(p) {
+    const { id, uid, usuario, recados, soVisita, ...resto } = p;
+    return clonar(resto);
+  }
+  const recadoDaLinha = r => ({ id: r.id, deUid: r.de, de: (r.autor && r.autor.usuario) || '?', texto: r.texto, data: String(r.criado_em).slice(0, 10) });
+  function perfilDaLinha(linha, idLocal, recados) {
+    const p = Object.assign(perfilNovo(linha.usuario), linha.dados || {});
+    Object.assign(p, { id: idLocal, uid: linha.id, usuario: linha.usuario });
+    p.recados = recados.filter(r => r.para === linha.id).map(recadoDaLinha);
+    if (!Array.isArray(p.posteres) || p.posteres.length < 3) p.posteres = perfilNovo('').posteres;
+    return p;
+  }
+  // Troca as imagens enviadas (que estão dentro dos dados) por links no armazenamento do Supabase.
+  async function subirImagens(d) {
+    const sobe = async u => (ehUpload(u) ? Conta.enviarImagem(u) : u);
+    d.avatar = await sobe(d.avatar);
+    for (const po of d.posteres || []) po.imagem = await sobe(po.imagem);
+    if (d.blog) {
+      d.blog.imagem = await sobe(d.blog.imagem);
+      for (const s of d.blog.stickers || []) if (s.src) s.src = await sobe(s.src);
+    }
+    return d;
+  }
+  // Usado pelos envios de imagem: com conta, a imagem vai pro armazenamento e volta como link.
+  const guardarImagem = async dataUrl => (Conta.logado() ? Conta.enviarImagem(dataUrl) : dataUrl);
+
+  // O botão do rodapé mostra se o TMDB já está conectado.
+  function atualizarRodapeTmdb() {
+    const b = document.querySelector('.rodape [data-acao="tmdb"]');
+    if (b) b.textContent = window.Filmes.temChave() ? '✔ TMDB conectado' : '⚙️ conectar ao TMDB';
+  }
+  // Ao entrar: a chave salva na conta volta pra este navegador; se só este navegador tinha a chave, ela sobe pra conta.
+  function sincronizarTmdb() {
+    const naConta = Conta.preferencia('tmdbChave');
+    let local = '';
+    try { local = localStorage.getItem('quartinho:tmdbChave') || ''; } catch (e) { /* ignora */ }
+    if (naConta && naConta !== local) window.Filmes.definirChave(naConta);
+    else if (!naConta && local) Conta.guardarPreferencia('tmdbChave', local).catch(() => { /* tenta de novo no próximo login */ });
+    atualizarRodapeTmdb();
+  }
+
+  let avisoTimer = null;
+  function avisar(texto) {
+    let el = document.getElementById('aviso-geral');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'aviso-geral';
+      el.className = 'aviso-geral';
+      el.setAttribute('role', 'status');
+      document.body.appendChild(el);
+    }
+    el.textContent = texto;
+    el.hidden = false;
+    clearTimeout(avisoTimer);
+    avisoTimer = setTimeout(() => { el.hidden = true; }, 4500);
+  }
+
+  function atualizarBotaoConta() {
+    const b = document.getElementById('botao-conta');
+    if (!b) return;
+    b.textContent = estadoConta === 'dentro' ? '👤 @' + perfis.eu.usuario
+      : estadoConta === 'carregando' ? '👤 ...' : '👤 Entrar';
+    b.classList.toggle('logado', estadoConta === 'dentro');
+  }
+
+  async function recarregarRede() {
+    if (!Conta.logado()) {
+      estadoConta = Conta.configurado ? 'fora' : 'demo';
+      perfis = carregar();
+      seguindo = new Set();
+      atualId = 'eu'; Pet.estado = null;
+      atualizarBotaoConta(); rota();
+      return;
+    }
+    estadoConta = 'carregando'; atualizarBotaoConta();
+    try {
+      let rede = await Conta.carregarRede();
+      if (!rede.eu) {
+        // primeiro login depois de confirmar o email: cria o perfil agora
+        const meta = (Conta.usuario().user_metadata) || {};
+        await criarPerfilInicial(meta.usuario, meta.levarLocal !== false);
+        rede = await Conta.carregarRede();
+      }
+      const novos = { eu: perfilDaLinha(rede.eu, 'eu', rede.recados) };
+      for (const l of rede.amigos) novos[l.usuario] = perfilDaLinha(l, l.usuario, rede.recados);
+      perfis = novos;
+      seguindo = rede.seguindo;
+      estadoConta = 'dentro';
+      sincronizarTmdb();
+      atualId = 'eu'; Pet.estado = null;
+    } catch (e) {
+      estadoConta = 'fora';
+      avisar('⚠ ' + e.message);
+    }
+    atualizarBotaoConta();
+    document.querySelectorAll('.janela').forEach(j => { const id = j.id.replace('jan-', ''); if (JANELAS[id] && JANELAS[id]._redesenhar && j.isConnected) JANELAS[id]._redesenhar(); });
+    rota();
+  }
+
+  async function criarPerfilInicial(nomeUsuario, levarLocal) {
+    let nome = nomeUsuario;
+    if (!Conta.USUARIO_OK.test(nome || '')) nome = 'user' + Math.random().toString(36).slice(2, 8);
+    const base = levarLocal ? carregar().eu : perfilNovo(nome);
+    if (levarLocal) base.recados = []; // recados de exemplo não vão pro banco
+    const dados = await subirImagens(dadosParaBanco(base));
+    await Conta.criarPerfil(nome, dados);
+  }
+
+  async function visitarRemoto(nomeUsuario, janela) {
+    try {
+      const r = await Conta.carregarPerfil(nomeUsuario);
+      if (!r) { avisar('Não achei ninguém com o usuário @' + nomeUsuario); location.hash = '#feed'; return; }
+      if (r.linha.id === Conta.uid()) { location.hash = '#quarto'; return; }
+      perfis[nomeUsuario] = perfilDaLinha(r.linha, nomeUsuario, r.recados);
+      perfis[nomeUsuario].soVisita = !seguindo.has(r.linha.id);
+      rota();
+      if (janela && JANELAS[janela]) abrir(janela);
+    } catch (e) { avisar('⚠ ' + e.message); }
+  }
+
+  async function alternarSeguir(id) {
+    const p = Object.values(perfis).find(x => x.uid === id);
+    try {
+      if (seguindo.has(id)) { await Conta.deixarDeSeguir(id); seguindo.delete(id); if (p) p.soVisita = true; }
+      else { await Conta.seguir(id); seguindo.add(id); if (p) p.soVisita = false; }
+    } catch (e) { avisar('⚠ ' + e.message); return; }
+    if (tela === 'quarto') renderTudo();
+    if (JANELAS.amigos._redesenhar && document.getElementById('jan-amigos')) JANELAS.amigos._redesenhar();
+  }
+
+  const btnSeguir = p => (estadoConta === 'dentro' && p.uid && p.id !== 'eu')
+    ? `<button class="btn98 mini-seguir" data-seguir="${esc(p.uid)}">${seguindo.has(p.uid) ? '✓ seguindo' : '+ seguir'}</button>` : '';
+
+  JANELAS.conta = {
+    titulo: '👤 Minha conta', largura: 380, aba: 'entrar',
+    html() {
+      if (!Conta.configurado) {
+        return `<p>As contas ainda não estão ligadas neste site.</p>
+          <p>Pra ligar: crie um projeto no <b>Supabase</b>, rode o arquivo <code>supabase/schema.sql</code> e preencha
+          <code>js/supabase-config.js</code>. O passo a passo está no README.</p>
+          <p class="vazio">Enquanto isso, tudo funciona no modo demonstração (salvo só neste navegador).</p>`;
+      }
+      if (estadoConta === 'dentro') {
+        const u = Conta.usuario();
+        return `<p>Você está dentro como <b>@${esc(perfis.eu.usuario)}</b>.</p>
+          <p><small>${esc(u.email || '')}</small></p>
+          <p>Seu quartinho é salvo na nuvem automaticamente. <span class="estado-salvo" role="status"></span></p>
+          <div class="linha"><button class="btn98" type="button" data-acao-conta="amigos">👥 procurar amigos</button>
+          <button class="btn98" type="button" data-acao-conta="sair">Sair</button></div>`;
+      }
+      if (estadoConta === 'carregando') return '<p>carregando sua conta...</p>';
+      const aba = (id, rotulo) => `<button class="aba" type="button" role="tab" aria-selected="${this.aba === id}" data-aba="${id}">${rotulo}</button>`;
+      const entrar = `<form class="form98" id="f-entrar">
+          ${campo('Email', 'email', '', 'email', 'required autocomplete="email"')}
+          ${campo('Senha', 'senha', '', 'password', 'required minlength="6" autocomplete="current-password"')}
+          <button class="btn98" type="submit">Entrar</button>
+          <p class="msg" role="status"></p>
+        </form>`;
+      const criar = `<form class="form98" id="f-criar">
+          ${campo('Nome de usuário', 'usuario', '', 'text', 'required minlength="3" maxlength="20" pattern="[a-z0-9_.]{3,20}" placeholder="ex.: cinefilo_2003" autocapitalize="none"')}
+          <small>letras minúsculas, números, _ e ponto. É o seu endereço: quartinho/#quarto/<i>usuario</i></small>
+          ${campo('Email', 'email', '', 'email', 'required autocomplete="email"')}
+          ${campo('Senha (mínimo 6)', 'senha', '', 'password', 'required minlength="6" autocomplete="new-password"')}
+          <label class="som-tv"><input type="checkbox" name="levar" checked>
+            <span>Levar o quartinho deste navegador pra conta<small>móveis, blog, estante, diário... (desmarque pra começar do zero)</small></span></label>
+          <button class="btn98" type="submit">Criar conta</button>
+          <p class="msg" role="status"></p>
+        </form>`;
+      return `<div class="abas" role="tablist">${aba('entrar', '🔑 Entrar')}${aba('criar', '✨ Criar conta')}</div>
+        <div class="painel">${this.aba === 'entrar' ? entrar : criar}</div>`;
+    },
+    bind(corpo, redesenhar) {
+      const msg = t => { const m = corpo.querySelector('.msg'); if (m) m.textContent = t; };
+      corpo.onclick = async e => {
+        const ab = e.target.closest('[data-aba]');
+        if (ab) { JANELAS.conta.aba = ab.dataset.aba; redesenhar(); return; }
+        const ac = e.target.closest('[data-acao-conta]');
+        if (!ac) return;
+        if (ac.dataset.acaoConta === 'amigos') { abrir('amigos'); return; }
+        if (ac.dataset.acaoConta === 'sair') {
+          try { await Conta.sair(); } catch (err) { avisar('⚠ ' + err.message); }
+        }
+      };
+      corpo.onsubmit = async e => {
+        e.preventDefault();
+        const f = e.target;
+        const botao = f.querySelector('[type=submit]');
+        botao.disabled = true;
+        msg('um instante...');
+        try {
+          if (f.id === 'f-entrar') {
+            await Conta.entrar(f.elements.email.value.trim(), f.elements.senha.value);
+            // o resto acontece em recarregarRede (aviso de login)
+          } else {
+            const usuario = f.elements.usuario.value.trim().toLowerCase();
+            const entrou = await Conta.criarConta(f.elements.email.value.trim(), f.elements.senha.value, usuario, f.elements.levar.checked);
+            if (!entrou) msg('Quase lá! Mandamos um link pro seu email. Confirme e depois entre aqui. 💌');
+          }
+        } catch (err) {
+          msg('⚠ ' + err.message);
+        }
+        botao.disabled = false;
+      };
+    }
+  };
+
+  JANELAS.amigos = {
+    titulo: '👥 Procurar amigos', largura: 400,
+    html() {
+      if (estadoConta !== 'dentro') return '<p>Entre na sua conta pra procurar e seguir amigos.</p><button class="btn98" data-acao-amigos="conta">👤 Entrar</button>';
+      const meus = Object.values(perfis).filter(p => p.id !== 'eu' && seguindo.has(p.uid));
+      return `<form class="form98" id="f-procurar">
+          <div class="linha">${campo('Nome de usuário', 'busca', this.busca || '', 'search', 'minlength="2" placeholder="ex.: ana_luz" autocapitalize="none"')}
+          <button class="btn98" type="submit">🔎 procurar</button></div>
+        </form>
+        <div class="resultados-pessoas">${this.resultados ? (this.resultados.length ? `<ul class="lista-pessoas">${this.resultados.map(r => `
+          <li><b>@${esc(r.usuario)}</b>${r.nome && r.nome !== r.usuario ? ` <small>(${esc(r.nome)})</small>` : ''}<br><small>${esc(r.humor || '')}</small>
+            <span class="acoes"><a class="btn98" href="#quarto/${esc(r.usuario)}">🚪 visitar</a>
+            <button class="btn98" data-seguir="${esc(r.id)}">${seguindo.has(r.id) ? '✓ seguindo' : '+ seguir'}</button></span></li>`).join('')}</ul>`
+          : '<p class="vazio">ninguém com esse nome...</p>') : ''}</div>
+        <fieldset><legend>Quem você segue (${meus.length})</legend>
+          ${meus.length ? `<ul class="lista-pessoas">${meus.map(p => `<li><b>@${esc(p.usuario)}</b>
+            <span class="acoes"><a class="btn98" href="#quarto/${esc(p.usuario)}">🚪 visitar</a>
+            <button class="btn98" data-seguir="${esc(p.uid)}">deixar de seguir</button></span></li>`).join('')}</ul>`
+          : '<p class="vazio">ninguém ainda. Procure seus amigos pelo nome de usuário!</p>'}
+        </fieldset>`;
+    },
+    bind(corpo, redesenhar) {
+      corpo.onsubmit = async e => {
+        e.preventDefault();
+        JANELAS.amigos.busca = e.target.elements.busca.value.trim();
+        try { JANELAS.amigos.resultados = await Conta.buscarPessoas(JANELAS.amigos.busca); }
+        catch (err) { avisar('⚠ ' + err.message); }
+        redesenhar();
+      };
+      corpo.onclick = e => {
+        if (e.target.closest('[data-acao-amigos]')) abrir('conta');
+      };
+    }
+  };
+
+  // seguir / deixar de seguir (no quarto, na janela de amigos)
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-seguir]');
+    if (b) { e.preventDefault(); b.disabled = true; alternarSeguir(b.dataset.seguir); }
+  });
+  Conta.aoSalvar(err => {
+    const el = document.querySelector('#jan-conta .estado-salvo');
+    if (err) avisar('⚠ não salvou na nuvem: ' + err.message);
+    else if (el) el.textContent = 'salvo ✔';
+  });
+
+  async function iniciarConta() {
+    if (!Conta.configurado) return;
+    atualizarBotaoConta();
+    try {
+      await Conta.iniciar();
+      Conta.aoMudar(recarregarRede);
+      await recarregarRede();
+    } catch (e) {
+      estadoConta = 'fora';
+      atualizarBotaoConta();
+      avisar('⚠ ' + e.message);
+    }
+  }
+
   // O que o feed pode usar daqui.
   window.Quartinho = {
     perfis: () => perfis,
@@ -1376,5 +1772,7 @@
   };
 
   contarVisita();
+  atualizarRodapeTmdb();
   rota();
+  iniciarConta();
 })();
