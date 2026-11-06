@@ -46,7 +46,7 @@ window.Busca = (function () {
           ${it.poster ? `<img src="${esc(it.poster)}" alt="" loading="lazy">` : '<span class="sem-capa" aria-hidden="true">🎬</span>'}
           <span><b>${esc(it.titulo)}</b><small>${it.ano ? esc(it.ano) + ' · ' : ''}${it.tipo === 'serie' ? 'série' : 'filme'}</small></span>
         </li>`).join('')
-        + (window.Filmes.temChave() ? '' : '<li class="busca-msg">catálogo de exemplo · conecte o TMDB pra buscar tudo</li>');
+        + (window.Filmes.temChave() ? '' : '<li class="busca-msg">a busca de filmes está desligada (falta a chave do TMDB)</li>');
       lista.hidden = false;
       input.setAttribute('aria-expanded', 'true');
       if (ativo >= 0) input.setAttribute('aria-activedescendant', `${id}-${ativo}`);

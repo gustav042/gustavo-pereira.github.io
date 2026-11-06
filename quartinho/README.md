@@ -15,21 +15,18 @@ e abra http://localhost:5173.
 
 ## Filmes e séries (TMDB)
 
-A busca de títulos usa a API do [TMDB](https://www.themoviedb.org/). Sem chave, ela funciona com um
-catálogo de exemplo (offline). Para conectar:
+A busca de títulos usa a API do [TMDB](https://www.themoviedb.org/). A chave do site fica em
+`js/config.js` e vale pra todo mundo: ninguém precisa conectar nada.
 
-1. Crie uma conta grátis no TMDB e peça uma chave em *Configurações → API*.
-2. No site, clique em **⚙️ conectar ao TMDB** (rodapé ou página de estatísticas) e cole a chave,
-   ou coloque-a em `js/config.js` (esse arquivo está no `.gitignore`; não publique sua chave).
-
-Sem um servidor, a chave fica visível no navegador. Para estudo tudo bem; para publicar, coloque um
-servidor no meio. Créditos ao TMDB ficam no rodapé, como os termos de uso pedem.
+Como o site não tem servidor, essa chave fica visível no código. Se alguém abusar, gere outra em
+*themoviedb.org → Configurações → API* e troque no `js/config.js`. (Pra esconder de vez, dá pra mover
+as chamadas pra uma Edge Function do Supabase.) Créditos ao TMDB ficam no rodapé, como os termos pedem.
 
 ## Contas de verdade (Supabase)
 
 O site é estático (funciona no GitHub Pages). As contas, os perfis, os recados e as imagens ficam no
-[Supabase](https://supabase.com), que o navegador acessa direto. Sem configurar, o site roda no **modo
-demonstração** (tudo só no seu navegador, com amigos de exemplo).
+[Supabase](https://supabase.com), que o navegador acessa direto. Sem configurar (ou sem entrar numa
+conta), o site funciona no **modo local**: um quartinho só seu, salvo no navegador, sem amigos.
 
 1. Crie uma conta grátis em supabase.com e um **New project** (região *South America (São Paulo)*).
    Guarde a senha do banco que ele pede.
@@ -73,7 +70,7 @@ Observação: no plano grátis, o Supabase pausa o projeto depois de uma semana 
 - **Stickers**: pixel art original, selinhos estilo "blinkie" (prontos ou com seu texto) e stickers com sua imagem.
   Dá pra arrastar, girar e mudar o tamanho; cada um fica preso no pedaço da página onde foi solto
   (título, quarto ou lateral), então continua no lugar certo no celular.
-- **Amigos**: quatro quartos de exemplo pra visitar, cada um com uma vibe e um blog diferente.
+- **Amigos**: com conta, dá pra procurar pessoas pelo @usuario, seguir, ver quem te segue e receber notificações (🔔).
 
 Os dados ficam no `localStorage` do navegador (ainda não há servidor/contas).
 
@@ -84,7 +81,7 @@ quartinho/
   index.html
   css/estilo.css    visual retrô + janelas estilo Windows 98
   js/util.js        funções pequenas (escape de HTML, datas...)
-  js/dados.js       perfis de exemplo (você + amigos) e layout dos quartos
+  js/dados.js       perfil inicial (quarto mobiliado, sem filmes) de quem usa sem conta
   js/sprites.js     catálogo de móveis e bichinhos em pixel art
   js/musica.js      rádio chiptune
   js/feed.js        feed (início)

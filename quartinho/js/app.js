@@ -54,8 +54,44 @@
         }
       } catch (e) { /* ignora */ }
     }
+    if (limparExemplos(perfis.eu)) {
+      try { localStorage.setItem(CHAVE, JSON.stringify({ perfis })); } catch (e) { /* ignora */ }
+    }
     return perfis;
   }
+
+  // As primeiras versões vinham com um perfil de exemplo (cinefilo_2003) cheio de filmes, listas,
+  // diário e recados de mentira. Isso tira só esses itens (pelo título + data / texto exatos),
+  // deixando móveis, blog, foto e tudo que a pessoa adicionou. Roda uma vez por perfil.
+  const EXEMPLOS = {
+    assistidos: ['Donnie Darko|2026-11-03', 'O Senhor dos Anéis|2026-10-30', 'Shrek|2026-10-28', 'Kill Bill|2026-10-21',
+      'Procurando Nemo|2026-10-19', 'Brilho Eterno|2026-10-12', 'Meninas Malvadas|2026-10-10', 'O Chamado|2026-10-05',
+      'Homem-Aranha|2026-09-28', 'Pânico 3|2026-09-20'],
+    diario: ['2026-11-03|Revi Donnie Darko de madrugada', '2026-10-30|Maratona de Senhor dos Anéis v'],
+    listas: { 'Quero ver': 'Amélie|O Labirinto do Fauno|Oldboy', 'Pra sexta à noite': 'Os Outros|Sinais|Extermínio' },
+    recados: ['que quarto lindo!!! me add', 'ainda tá com meu DVD do Matrix hein', 'bora ver Lost juntos sábado?'],
+    posteres: ['Mudou meu jeito de ver filme de ação. E a internet.', 'Assisto todo ano e sempre choro numa parte diferente.',
+      'O melhor filme brasileiro, não aceito discussão.'],
+    textos: { humor: '😎 de boa, vendo filme', cidade: 'São Paulo, SP',
+      sobre: 'oi! esse é meu quartinho. aqui guardo tudo que eu assisto. fique à vontade, só não mexe nos meus DVDs :P' }
+  };
+  // Devolve true se mudou alguma coisa.
+  function limparExemplos(p) {
+    if (!p || p.exemplosLimpos) return false;
+    const novo = perfilNovoBase();
+    p.assistidos = (p.assistidos || []).filter(f => !EXEMPLOS.assistidos.includes(f.titulo + '|' + f.data));
+    p.diario = (p.diario || []).filter(d => !EXEMPLOS.diario.includes(d.data + '|' + String(d.texto || '').slice(0, 30)));
+    p.listas = (p.listas || []).filter(l => EXEMPLOS.listas[l.nome] !== (l.itens || []).join('|'));
+    p.recados = (p.recados || []).filter(r => !EXEMPLOS.recados.includes(r.texto));
+    p.posteres = (p.posteres || []).map((po, i) => EXEMPLOS.posteres.includes(po.motivo) && !po.imagem ? novo.posteres[i] || po : po);
+    const a = p.assistindo || {};
+    if (a.titulo === 'Lost' && a.detalhe === 'Temporada 1 · Episódio 5') p.assistindo = { titulo: '', detalhe: '', progresso: 0 };
+    for (const [k, v] of Object.entries(EXEMPLOS.textos)) if (p[k] === v) p[k] = novo[k];
+    if (p.nome === 'cinefilo_2003') p.nome = p.usuario || novo.nome;
+    p.exemplosLimpos = true;
+    return true;
+  }
+  const perfilNovoBase = () => clonar(window.QUARTINHO_DADOS.perfis.eu);
   // Devolve false se o navegador não deixou salvar (ex.: armazenamento cheio).
   function salvar() {
     if (window.Conta.logado() && perfis.eu && perfis.eu.uid) { window.Conta.salvarPerfil(dadosParaBanco(perfis.eu)); return true; }
@@ -1024,6 +1060,14 @@
       titulo: '⚙️ Conectar ao TMDB', largura: 480,
       html() {
         const tem = window.Filmes.temChave();
+        const doSite = !!String((window.QUARTINHO_CONFIG || {}).tmdbChave || '').trim();
+        if (doSite) {
+          return `<p>✔ A busca de filmes e séries já está ligada pro site todo, usando o <b>TMDB</b>
+            (uma base gratuita com capas, gêneros, duração, diretor e elenco).</p>
+            <p>Ninguém precisa conectar nada: é só digitar o nome do filme ou da série.</p>
+            <p><small>Informações de filmes e séries: <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a>.
+            This product uses the TMDB API but is not endorsed or certified by TMDB.</small></p>`;
+        }
         return `<p>O <b>TMDB</b> é uma base gratuita de filmes e séries. Conectando, a busca encontra qualquer título,
           com capa, gêneros, duração, diretor e elenco, e as estatísticas ficam completas.</p>
           <ol class="passos">
@@ -1037,7 +1081,7 @@
             <p class="linha">
               <button class="btn98" type="submit">🔌 Testar e salvar</button>
               ${tem ? '<button class="btn98" type="button" data-desconectar>Desconectar</button>' : ''}
-              <span class="msg" role="status">${tem ? '✔ conectado' : 'usando o catálogo de exemplo'}</span>
+              <span class="msg" role="status">${tem ? '✔ conectado' : 'sem conexão com o TMDB'}</span>
             </p>
           </form>
           <p><small>${estadoConta === 'dentro'
@@ -1485,7 +1529,7 @@
   window.addEventListener('hashchange', rota);
 
   // ================= contas (Supabase) =================
-  // Sem conta: modo demonstração (localStorage + amigos de exemplo).
+  // Sem conta: modo local (tudo salvo só neste navegador, sem amigos).
   // Com conta: "eu" é o meu perfil do banco e os outros são quem eu sigo (a chave no mapa é o @usuario).
   const Conta = window.Conta;
   let seguindo = new Set();
@@ -1590,6 +1634,8 @@
       for (const l of rede.amigos) novos[l.usuario] = perfilDaLinha(l, l.usuario, rede.recados);
       perfis = novos;
       seguindo = rede.seguindo;
+      // conta criada levando o perfil de exemplo: limpa os filmes/listas/diário de mentira (uma vez)
+      if (limparExemplos(perfis.eu)) Conta.salvarPerfil(dadosParaBanco(perfis.eu));
       estadoConta = 'dentro';
       sincronizarTmdb();
       vistoEm = Conta.preferencia('notifVistoEm') || '';

@@ -161,7 +161,7 @@ window.Stats = (function () {
         ${r.atores.length ? janela('🌟 atores que mais aparecem', `<ol class="lista-top">${r.atores.map(([a, n]) => `<li>${esc(a)} <small>(${n})</small></li>`).join('')}</ol>`) : ''}
         ${janela(ehEu ? '🤝 compatibilidade com os amigos' : `🤝 compatibilidade de ${esc(p.nome)}`, compatHtml, 'largo')}
       </div>
-      <p class="fonte-dados">${window.Filmes.temChave() ? 'Informações dos filmes: TMDB.' : 'Usando o catálogo de exemplo (offline).'} <button class="btn98" data-acao="tmdb">⚙️ ${window.Filmes.temChave() ? 'conexão com o TMDB' : 'conectar ao TMDB'}</button></p>`;
+      <p class="fonte-dados">${window.Filmes.temChave() ? 'Informações dos filmes: TMDB.' : 'A busca de filmes está desligada.'} <button class="btn98" data-acao="tmdb">⚙️ ${window.Filmes.temChave() ? 'conexão com o TMDB' : 'conectar ao TMDB'}</button></p>`;
   }
 
   return { render, resumo, compat };
