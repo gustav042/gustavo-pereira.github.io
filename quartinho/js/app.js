@@ -1459,7 +1459,7 @@
     const sairDoQuarto = () => {
       cancelAnimationFrame(Pet.raf);
       window.Blog.limpar();
-      document.querySelectorAll('.janela:not(#jan-tmdb):not(#jan-conta):not(#jan-amigos)').forEach(fecharJanela);
+      document.querySelectorAll('.janela:not(#jan-tmdb):not(#jan-conta):not(#jan-amigos):not(#jan-notificacoes)').forEach(fecharJanela);
       atualizarSomTV();
     };
     if (partes[0] === 'stats') {
@@ -1572,8 +1572,9 @@
       estadoConta = Conta.configurado ? 'fora' : 'demo';
       perfis = carregar();
       seguindo = new Set();
+      novidades = { seguidores: [], recados: [] };
       atualId = 'eu'; Pet.estado = null;
-      atualizarBotaoConta(); rota();
+      atualizarBotaoConta(); atualizarSino(); rota();
       return;
     }
     estadoConta = 'carregando'; atualizarBotaoConta();
@@ -1591,6 +1592,9 @@
       seguindo = rede.seguindo;
       estadoConta = 'dentro';
       sincronizarTmdb();
+      vistoEm = Conta.preferencia('notifVistoEm') || '';
+      conhecidas.clear();
+      buscarNovidades(false);
       atualId = 'eu'; Pet.estado = null;
     } catch (e) {
       estadoConta = 'fora';
@@ -1629,8 +1633,77 @@
       else { await Conta.seguir(id); seguindo.add(id); if (p) p.soVisita = false; }
     } catch (e) { avisar('⚠ ' + e.message); return; }
     if (tela === 'quarto') renderTudo();
-    if (JANELAS.amigos._redesenhar && document.getElementById('jan-amigos')) JANELAS.amigos._redesenhar();
+    redesenharJanelasConta();
   }
+  function redesenharJanelasConta() {
+    for (const id of ['amigos', 'notificacoes']) if (JANELAS[id]._redesenhar && document.getElementById('jan-' + id)) JANELAS[id]._redesenhar();
+  }
+
+  // ================= notificações (quem me seguiu, recados novos) =================
+  let novidades = { seguidores: [], recados: [] };
+  let vistoEm = '';            // até quando a pessoa já viu as notificações (fica na conta)
+  const conhecidas = new Set(); // o que já apareceu nesta aba (pra avisar só do que é novo mesmo)
+  const chaveNotif = n => n.tipo === 'seguiu' ? 's' + n.uid + n.quando : 'r' + n.id;
+  function listaNotificacoes() {
+    const l = novidades.seguidores.filter(s => s.quem).map(s => ({ tipo: 'seguiu', uid: s.seguidor, usuario: s.quem.usuario, quando: s.criado_em }))
+      .concat(novidades.recados.map(r => ({ tipo: 'recado', id: r.id, usuario: (r.autor && r.autor.usuario) || '?', texto: r.texto, quando: r.criado_em })));
+    return l.sort((a, b) => String(b.quando).localeCompare(String(a.quando))).slice(0, 40);
+  }
+  const contarNovas = () => listaNotificacoes().filter(n => n.quando > vistoEm).length;
+  function atualizarSino() {
+    const b = document.getElementById('botao-notif');
+    if (!b) return;
+    b.hidden = estadoConta !== 'dentro';
+    const n = contarNovas();
+    b.innerHTML = `🔔${n ? `<span class="badge-notif">${n > 9 ? '9+' : n}</span>` : ''}`;
+    b.setAttribute('aria-label', n ? `Notificações: ${n} nova(s)` : 'Notificações');
+    b.classList.toggle('tem-novas', n > 0);
+  }
+  async function buscarNovidades(avisarNovas) {
+    if (estadoConta !== 'dentro') return;
+    try { novidades = await Conta.novidades(); } catch (e) { return; } // sem conexão: tenta na próxima
+    const lista = listaNotificacoes();
+    const novas = lista.filter(n => !conhecidas.has(chaveNotif(n)) && n.quando > vistoEm);
+    lista.forEach(n => conhecidas.add(chaveNotif(n)));
+    if (avisarNovas && novas.length) {
+      const n = novas[0];
+      avisar(n.tipo === 'seguiu' ? `🔔 @${n.usuario} começou a seguir você!` : `🔔 @${n.usuario} deixou um recado no seu mural`);
+    }
+    atualizarSino();
+    redesenharJanelasConta();
+  }
+  // confere de novo a cada minuto (só com a aba aberta na tela) e quando a pessoa volta pra aba
+  setInterval(() => { if (document.visibilityState === 'visible') buscarNovidades(true); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') buscarNovidades(true); });
+
+  JANELAS.notificacoes = {
+    titulo: '🔔 Notificações', largura: 400,
+    aoAbrir() {
+      // marca tudo como visto (guardando o que era novo pra destacar agora)
+      this.vistoAntes = vistoEm;
+      const lista = listaNotificacoes();
+      const agora = new Date().toISOString();
+      vistoEm = lista.length && lista[0].quando > agora ? lista[0].quando : agora;
+      Conta.guardarPreferencia('notifVistoEm', vistoEm).catch(() => { /* fica só nesta aba */ });
+      atualizarSino();
+    },
+    html() {
+      if (estadoConta !== 'dentro') return '<p>Entre na sua conta pra ver suas notificações.</p>';
+      const lista = listaNotificacoes();
+      if (!lista.length) return '<p class="vazio">nada por aqui ainda. Quando alguém seguir você ou deixar recado, aparece aqui! 💌</p>';
+      return `<ul class="lista-notif">${lista.map(n => {
+        const novo = n.quando > (this.vistoAntes || '') ? ' class="notif-nova"' : '';
+        const data = fmtData(String(n.quando).slice(0, 10));
+        if (n.tipo === 'seguiu') {
+          return `<li${novo}><p>👤 <a href="#quarto/${esc(n.usuario)}">@${esc(n.usuario)}</a> começou a seguir você <small>${data}</small></p>
+            <span class="acoes">${seguindo.has(n.uid) ? '<button class="btn98" disabled>✓ vocês se seguem</button>' : `<button class="btn98" data-seguir="${esc(n.uid)}">+ seguir de volta</button>`}</span></li>`;
+        }
+        return `<li${novo}><p>💌 <a href="#quarto/${esc(n.usuario)}">@${esc(n.usuario)}</a> deixou um recado <small>${data}</small></p>
+          <blockquote class="texto-recado">${esc(n.texto)}</blockquote>
+          <span class="acoes"><a class="btn98" href="${linkQuarto('eu', 'mural')}">📌 ver meu mural</a></span></li>`;
+      }).join('')}</ul>`;
+    }
+  };
 
   const btnSeguir = p => (estadoConta === 'dentro' && p.uid && p.id !== 'eu')
     ? `<button class="btn98 mini-seguir" data-seguir="${esc(p.uid)}">${seguindo.has(p.uid) ? '✓ seguindo' : '+ seguir'}</button>` : '';
@@ -1722,6 +1795,13 @@
             <span class="acoes"><a class="btn98" href="#quarto/${esc(r.usuario)}">🚪 visitar</a>
             <button class="btn98" data-seguir="${esc(r.id)}">${seguindo.has(r.id) ? '✓ seguindo' : '+ seguir'}</button></span></li>`).join('')}</ul>`
           : '<p class="vazio">ninguém com esse nome...</p>') : ''}</div>
+        <fieldset><legend>Quem segue você (${novidades.seguidores.length})</legend>
+          ${novidades.seguidores.length ? `<ul class="lista-pessoas">${novidades.seguidores.map(s => s.quem ? `<li><b>@${esc(s.quem.usuario)}</b>
+            ${s.quem.nome && s.quem.nome !== s.quem.usuario ? ` <small>(${esc(s.quem.nome)})</small>` : ''}
+            <span class="acoes"><a class="btn98" href="#quarto/${esc(s.quem.usuario)}">🚪 visitar</a>
+            ${seguindo.has(s.seguidor) ? '<button class="btn98" disabled>✓ vocês se seguem</button>' : `<button class="btn98" data-seguir="${esc(s.seguidor)}">+ seguir de volta</button>`}</span></li>` : '').join('')}</ul>`
+          : '<p class="vazio">ninguém ainda... manda seu @ pros amigos!</p>'}
+        </fieldset>
         <fieldset><legend>Quem você segue (${meus.length})</legend>
           ${meus.length ? `<ul class="lista-pessoas">${meus.map(p => `<li><b>@${esc(p.usuario)}</b>
             <span class="acoes"><a class="btn98" href="#quarto/${esc(p.usuario)}">🚪 visitar</a>

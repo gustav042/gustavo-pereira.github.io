@@ -133,6 +133,20 @@ window.Conta = (function () {
   async function seguir(id) { checar(await sb.from('seguindo').insert({ seguidor: uid(), seguido: id })); }
   async function deixarDeSeguir(id) { checar(await sb.from('seguindo').delete().eq('seguidor', uid()).eq('seguido', id)); }
 
+  // ---------- seguidores e notificações ----------
+  // Quem me segue (mais recentes primeiro) e os últimos recados que outras pessoas deixaram no meu mural.
+  async function novidades() {
+    const [seg, rec] = await Promise.all([
+      sb.from('seguindo')
+        .select('seguidor, criado_em, quem:perfis!seguindo_seguidor_fkey(usuario, nome:dados->>nome)')
+        .eq('seguido', uid()).order('criado_em', { ascending: false }).limit(200),
+      sb.from('recados')
+        .select('id, de, texto, criado_em, autor:perfis!recados_de_fkey(usuario)')
+        .eq('para', uid()).neq('de', uid()).order('criado_em', { ascending: false }).limit(30)
+    ]);
+    return { seguidores: checar(seg), recados: checar(rec) };
+  }
+
   // ---------- recados ----------
   async function recadosDe(ids) {
     if (!ids.length) return [];
@@ -174,7 +188,7 @@ window.Conta = (function () {
     configurado, iniciar, usuario, uid, logado, aoMudar,
     usuarioLivre, criarConta, entrar, sair,
     meuPerfil, criarPerfil, salvarPerfil, aoSalvar: f => aoSalvarOuvintes.push(f),
-    carregarRede, carregarPerfil, buscarPessoas, seguir, deixarDeSeguir,
+    carregarRede, carregarPerfil, buscarPessoas, seguir, deixarDeSeguir, novidades,
     enviarRecado, apagarRecado, enviarImagem, preferencia, guardarPreferencia,
     USUARIO_OK
   };

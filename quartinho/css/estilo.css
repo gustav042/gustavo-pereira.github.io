@@ -908,3 +908,28 @@ body.editando-stickers .sticker.arrastando { cursor: grabbing; z-index: 2; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 #f-status textarea, #f-filme textarea { width: 100%; resize: vertical; font: inherit; }
+
+/* notificações */
+.botao-notif {
+  margin-left: auto; position: relative;
+  font-size: 18px; line-height: 1; cursor: pointer; color: #000;
+  background: linear-gradient(#fff, #c0c0c0);
+  border: 2px solid; border-color: #fff #000 #000 #fff; padding: 5px 10px;
+}
+.botao-notif:not([hidden]) + .botao-conta { margin-left: 0; }
+.botao-notif.tem-novas { animation: sininho 2.4s ease-in-out infinite; }
+@keyframes sininho { 0%, 80%, 100% { transform: rotate(0); } 84% { transform: rotate(14deg); } 88% { transform: rotate(-12deg); } 92% { transform: rotate(8deg); } 96% { transform: rotate(-4deg); } }
+.badge-notif {
+  position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 4px;
+  background: #e8102e; color: #fff; border: 2px solid #fff; border-radius: 9px;
+  font-family: var(--pixel); font-size: 8px; line-height: 14px; text-align: center;
+}
+.lista-notif { list-style: none; margin: 0; padding: 0; }
+.lista-notif li { padding: 6px 6px 8px; border-bottom: 1px dotted #808080; }
+.lista-notif li p { margin: 0 0 4px; }
+.lista-notif li small { color: #666; }
+.lista-notif .notif-nova { background: #ffffe1; border-left: 4px solid #e8102e; }
+.lista-notif .acoes { display: flex; gap: 4px; flex-wrap: wrap; }
+.lista-notif a.btn98 { color: #000; text-decoration: none; }
+@media (max-width: 520px) { .botao-notif { margin-left: 0; } }
+@media (prefers-reduced-motion: reduce) { .botao-notif.tem-novas { animation: none; } }
