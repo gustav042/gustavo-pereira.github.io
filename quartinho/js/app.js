@@ -521,7 +521,7 @@
       <div class="caixa">
         <div class="caixa-titulo">📺 assistindo agora</div>
         ${a.titulo
-          ? `<p><b>${esc(a.titulo)}</b><br>${esc(a.detalhe)}</p><div class="barra98" style="margin:6px 10px 10px"><div style="width:${prog}%"></div></div>`
+          ? `<p><b>${esc(a.titulo)}</b><br>${esc(a.detalhe)}</p>${a.comentario ? `<p class="comentario-lateral">💬 “${esc(a.comentario)}”</p>` : ''}<div class="barra98" style="margin:6px 10px 10px"><div style="width:${prog}%"></div></div>`
           : `<p class="vazio">nada no momento</p>`}
       </div>
       <div class="caixa">
@@ -766,7 +766,8 @@
           ${p.assistidos.length ? `<ul class="lista-filmes">${p.assistidos.map((f, i) => `
             <li><span class="lombada" style="background:${corDe(f.titulo)}"></span>
               <span><b>${esc(f.titulo)}</b> <small>${f.ano ? '(' + esc(f.ano) + ')' : ''} ${fmtData(f.data)}</small>
-                ${(() => { const m = window.Filmes.metaDe(f); return m && m.generos.length ? `<br><small class="generos">${m.generos.slice(0, 3).map(esc).join(' · ')}</small>` : ''; })()}</span>
+                ${(() => { const m = window.Filmes.metaDe(f); return m && m.generos.length ? `<br><small class="generos">${m.generos.slice(0, 3).map(esc).join(' · ')}</small>` : ''; })()}
+                ${f.comentario ? `<span class="comentario-estante">“${esc(f.comentario)}”</span>` : ''}</span>
               <span class="estrelas" title="${f.nota} de 5">${estrelas(f.nota)}</span>
               ${ehMeu() ? `<button class="btn98 mini" data-tirar="${i}" aria-label="Tirar ${esc(f.titulo)} da estante">x</button>` : ''}
             </li>`).join('')}</ul>` : '<p class="vazio">estante vazia... bora assistir algo!</p>'}
@@ -776,8 +777,9 @@
                 ${campo('Título (digite pra buscar)', 'titulo', '', 'text', 'required maxlength="80" placeholder="ex.: matrix"')}
                 <span class="curto">${campo('Ano', 'ano', '', 'number', 'min="1888" max="2100"')}</span>
                 <label class="campo curto"><span>Nota</span><select name="nota">${[5, 4, 3, 2, 1].map(n => `<option value="${n}">${'★'.repeat(n)}</option>`).join('')}</select></label>
-                <button class="btn98" type="submit">Guardar</button>
               </div>
+              <label class="campo"><span>O que achou? (opcional)</span><textarea name="comentario" maxlength="280" rows="2" placeholder="ex.: chorei no final, recomendo demais"></textarea></label>
+              <button class="btn98" type="submit">Guardar</button>
             </fieldset>
           </form>` : ''}`;
       },
@@ -799,6 +801,8 @@
           const titulo = String(fd.get('titulo')).trim();
           if (!titulo) return;
           const novo = { titulo, ano: Number(fd.get('ano')) || '', nota: Number(fd.get('nota')) || 3, data: hoje() };
+          const comentario = String(fd.get('comentario') || '').trim().slice(0, 280);
+          if (comentario) novo.comentario = comentario;
           if (escolhido && escolhido.meta && escolhido.titulo === titulo) novo.meta = escolhido.meta;
           perfil().assistidos.unshift(novo);
           mudou(); redesenhar();
@@ -841,6 +845,7 @@
             <h3>${esc(a.titulo)}</h3>
             <p>${esc(a.detalhe)}</p>
           </div>
+          ${a.comentario ? `<p class="comentario-tv">💬 “${esc(a.comentario)}”</p>` : ''}
           <p>Progresso: ${prog}%</p>
           <div class="barra98"><div style="width:${prog}%"></div></div>
           <p>${htmlSomTV()}</p>`
@@ -1312,6 +1317,7 @@
     const tvAntes = p.assistindo || {};
     const tvNovo = { titulo: s('tv_titulo'), detalhe: s('tv_detalhe'), progresso: Number(s('tv_progresso')) || 0 };
     if (tvAntes.meta && tvAntes.titulo === tvNovo.titulo) tvNovo.meta = tvAntes.meta;
+    if (tvAntes.comentario && tvAntes.titulo === tvNovo.titulo) tvNovo.comentario = tvAntes.comentario;
     if (escolhaTv && escolhaTv.titulo === tvNovo.titulo && escolhaTv.meta) tvNovo.meta = escolhaTv.meta;
     const auto = window.Filmes.progressoCalculado(tvNovo);
     if (auto !== null) tvNovo.progresso = auto;

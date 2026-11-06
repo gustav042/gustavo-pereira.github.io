@@ -67,7 +67,9 @@ window.Feed = (function () {
             <p class="titulo-filme">${esc(f.titulo)} ${f.ano ? `<small>(${esc(f.ano)})</small>` : ''}</p>
             ${meta && meta.generos.length ? `<p class="tags-genero">${meta.generos.slice(0, 3).map(g => `<span>${esc(g)}</span>`).join('')}</p>` : ''}
             <p class="estrelas-feed" aria-label="nota ${f.nota} de 5">${estrelas(f.nota)}</p>
-            <p class="comentario-nota">${['', 'socorro, que bomba 💀', 'meh...', 'legalzinho', 'muito bom!!', 'OBRA-PRIMA ♥♥♥'][f.nota] || ''}</p>
+            ${f.comentario
+              ? `<blockquote class="comentario-filme">“${esc(f.comentario)}”</blockquote>`
+              : `<p class="comentario-nota">${['', 'socorro, que bomba 💀', 'meh...', 'legalzinho', 'muito bom!!', 'OBRA-PRIMA ♥♥♥'][f.nota] || ''}</p>`}
           </div>
         </div>`;
       if (p.id !== 'eu') {
@@ -109,6 +111,7 @@ window.Feed = (function () {
         const a = p.assistindo, prog = window.Filmes.progressoDe(a);
         return `<a class="mini-tv" href="${Q().linkQuarto(p.id)}" title="Visitar o quartinho de ${esc(p.nome)}">
           <span class="mini-tv-tela"><b>${esc(a.titulo)}</b><small>${esc(a.detalhe)}</small><i style="width:${prog}%"></i></span>
+          ${a.comentario ? `<em class="mini-tv-comentario" title="${esc(a.comentario)}">💬 ${esc(a.comentario)}</em>` : ''}
           <span class="mini-tv-dono">${miniAvatar(p)} ${esc(p.nome)}</span>
           <span class="mini-tv-link">🚪 visitar</span>
         </a>`;
@@ -126,6 +129,7 @@ window.Feed = (function () {
           <label class="campo"><span>Episódio/detalhe</span><input type="text" name="detalhe" maxlength="60" value="${esc(a.detalhe || '')}" placeholder="ex.: T1 · E06"></label>
         </div>
         <div class="linha seletor-episodio" hidden></div>
+        <label class="campo"><span>Comentário (opcional)</span><textarea name="comentario" maxlength="280" rows="2" placeholder="ex.: esse episódio me destruiu 😭"></textarea></label>
         <div class="linha">
           <button class="btn98" type="submit" name="acao" value="vendo">📺 tô assistindo</button>
           <span class="ou">ou</span>
@@ -280,6 +284,7 @@ window.Feed = (function () {
     const acao = e.submitter ? e.submitter.value : 'vendo';
     const titulo = String(fd.get('titulo') || '').trim();
     const detalhe = String(fd.get('detalhe') || '').trim();
+    const comentario = String(fd.get('comentario') || '').trim().slice(0, 280);
     if (!titulo) return;
     const p = eu();
     // informações do filme/série: da busca, ou do que já estava na TV
@@ -288,11 +293,13 @@ window.Feed = (function () {
     const ano = escolhaStatus && escolhaStatus.titulo === titulo ? escolhaStatus.ano : '';
     if (acao === 'terminei') {
       const novo = { titulo, ano: Number(ano) || '', nota: Number(fd.get('nota')) || 3, data: hoje() };
+      if (comentario) novo.comentario = comentario;
       if (meta) novo.meta = meta;
       p.assistidos.unshift(novo);
       if (anterior) p.assistindo = { titulo: '', detalhe: '', progresso: 0 };
     } else {
       p.assistindo = { titulo, detalhe, progresso: anterior ? anterior.progresso : 0 };
+      if (comentario) p.assistindo.comentario = comentario; // vale pro episódio atual
       if (meta) p.assistindo.meta = meta;
       // série: o progresso sai da temporada/episódio escolhidos
       const auto = window.Filmes.progressoCalculado(p.assistindo);

@@ -894,3 +894,17 @@ body.editando-stickers .sticker.arrastando { cursor: grabbing; z-index: 2; }
 /* foto do perfil no Decorar */
 .previa-avatar { width: 72px; height: 72px; flex: none; border: 2px solid #000; background: #eee; overflow: hidden; image-rendering: pixelated; }
 .previa-avatar img, .previa-avatar svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* comentários sobre filmes e séries */
+.comentario-filme {
+  margin: 4px 0 0; padding: 4px 8px; background: #ffffe1; border-left: 3px solid var(--destaque);
+  font-style: italic; color: #333; white-space: pre-wrap; word-break: break-word;
+}
+.comentario-estante { display: block; font-size: 16px; font-style: italic; color: #555; margin-top: 2px; word-break: break-word; }
+.comentario-tv { font-style: italic; background: #ffffe1; border: 1px solid #808080; padding: 4px 8px; word-break: break-word; }
+.comentario-lateral { font-style: italic; font-size: .9em; color: #555; word-break: break-word; }
+.mini-tv-comentario {
+  display: block; font-size: 15px; color: #444; margin: 2px 4px 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#f-status textarea, #f-filme textarea { width: 100%; resize: vertical; font: inherit; }
