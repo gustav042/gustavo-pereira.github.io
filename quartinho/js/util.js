@@ -58,5 +58,8 @@ window.U = (function () {
   }
   const estrelas = n => '★'.repeat(n) + '☆'.repeat(5 - n);
 
-  return { esc, urlSegura, ehUpload, imagemParaPoster, corValida, limitar, hash, corDe, hoje, fmtData, estrelas };
+  // id curtinho e único (pra filmes da estante, comentários...)
+  const novoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  return { esc, urlSegura, ehUpload, imagemParaPoster, corValida, limitar, hash, corDe, hoje, fmtData, estrelas, novoId };
 })();

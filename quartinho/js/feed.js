@@ -14,31 +14,47 @@ window.Feed = (function () {
   const nomeDe = p => p.id === 'eu' ? 'você' : p.nome;
 
   // ---------- montando os acontecimentos ----------
+  // Momento do acontecimento, pra ordenar: a hora exata quando existe (`quando`); itens antigos só
+  // têm a data, então ficam no começo do dia, mantendo a ordem em que estão na lista (mais novo primeiro).
+  const momento = (x, idx) => {
+    const t = Date.parse(x.quando || '');
+    if (!isNaN(t)) return t;
+    const d = Date.parse((x.data || '1970-01-01') + 'T00:00:00');
+    return (isNaN(d) ? 0 : d) - idx;
+  };
   function eventos() {
     const perfis = Object.values(Q().perfis()).filter(p => !p.soVisita);
-    const porNome = Object.fromEntries(perfis.map(p => [p.nome, p]));
+    const porNome = {};
+    for (const p of perfis) { porNome[p.nome] = p; if (p.usuario) porNome[p.usuario] = p; }
     const evs = [];
     for (const p of perfis) {
-      (p.assistidos || []).forEach(f => evs.push({ id: `a|${p.id}|${f.titulo}|${f.data}`, tipo: 'assistiu', p, f, data: f.data }));
-      (p.diario || []).forEach(d => evs.push({ id: `d|${p.id}|${d.data}|${hash(d.texto)}`, tipo: 'diario', p, d, data: d.data }));
-      (p.recados || []).forEach(r => {
+      (p.assistidos || []).forEach((f, i) => evs.push({ id: `a|${p.id}|${f.titulo}|${f.data}`, tipo: 'assistiu', p, f, data: f.data, quando: f.quando, t: momento(f, i) }));
+      (p.diario || []).forEach((d, i) => evs.push({ id: `d|${p.id}|${d.data}|${hash(d.texto)}`, tipo: 'diario', p, d, data: d.data, quando: d.quando, t: momento(d, i) }));
+      (p.recados || []).forEach((r, i) => {
         const autor = porNome[r.de];
-        if (autor && autor.id !== p.id) evs.push({ id: `r|${p.id}|${r.data}|${hash(r.texto)}`, tipo: 'recado', p: autor, para: p, r, data: r.data });
+        if (autor && autor.id !== p.id) evs.push({ id: `r|${p.id}|${r.data}|${hash(r.texto)}`, tipo: 'recado', p: autor, para: p, r, data: r.data, quando: r.quando, t: momento(r, i) });
       });
     }
-    return evs.sort((a, b) => String(b.data).localeCompare(String(a.data)) || hash(b.id) - hash(a.id));
+    // do mais recente pro mais antigo
+    return evs.sort((a, b) => b.t - a.t || hash(b.id) - hash(a.id));
   }
 
-  // "hoje", "ontem" ou a data; e uma hora inventada (mas sempre a mesma) pra dar clima.
+  // "hoje", "ontem" ou a data, com a hora de verdade (itens antigos sem hora ganham uma inventada, sempre a mesma).
   function quando(ev) {
-    const d0 = new Date(hoje() + 'T00:00:00'), d1 = new Date(ev.data + 'T00:00:00');
+    const real = ev.quando ? new Date(ev.quando) : null;
+    const temHora = real && !isNaN(real);
+    const iso = temHora ? `${real.getFullYear()}-${String(real.getMonth() + 1).padStart(2, '0')}-${String(real.getDate()).padStart(2, '0')}` : ev.data;
+    const d0 = new Date(hoje() + 'T00:00:00'), d1 = new Date(iso + 'T00:00:00');
     const dias = Math.round((d0 - d1) / 86400000);
-    const dia = dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : `em ${fmtData(ev.data)}`;
+    const dia = dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : `em ${fmtData(iso)}`;
     const h = hash(ev.id);
-    return { dia, hora: `${String(8 + (h % 16)).padStart(2, '0')}:${String((h >>> 4) % 60).padStart(2, '0')}`, novo: dias <= 1 };
+    const hora = temHora
+      ? `${String(real.getHours()).padStart(2, '0')}:${String(real.getMinutes()).padStart(2, '0')}`
+      : `${String(8 + (h % 16)).padStart(2, '0')}:${String((h >>> 4) % 60).padStart(2, '0')}`;
+    return { dia, hora, novo: dias <= 1 };
   }
 
-  const qtdCurtidas = id => (hash(id) % 6) + (curtidas[id] ? 1 : 0);
+  const qtdCurtidas = id => (curtidas[id] ? 1 : 0); // curtidas ainda ficam só neste navegador
 
   function naListaQueroVer(titulo) {
     const t = titulo.toLowerCase();
@@ -87,6 +103,8 @@ window.Feed = (function () {
       extra = `<a class="btn98" href="${Q().linkQuarto(para.id, 'mural')}">💬 ver mural</a>`;
     }
     const curtido = !!curtidas[ev.id];
+    const coments = ev.tipo === 'assistiu' ? C().doPost(p, ev.f) : [];
+    if (ev.tipo === 'assistiu') postsNaTela.set(ev.id, { p, f: ev.f });
     return `<article class="post post-${ev.tipo}">
       <header class="post-topo">
         ${miniAvatar(p)}
@@ -95,11 +113,37 @@ window.Feed = (function () {
       </header>
       <div class="post-corpo">${corpo}</div>
       <footer class="post-rodape">
-        <button class="btn98 ${curtido ? 'curtido' : ''}" data-curtir="${esc(ev.id)}" aria-pressed="${curtido}">👍 ${curtido ? 'curtiu' : 'curtir'} (${qtdCurtidas(ev.id)})</button>
+        <button class="btn98 ${curtido ? 'curtido' : ''}" data-curtir="${esc(ev.id)}" aria-pressed="${curtido}">👍 ${curtido ? 'curtiu' : 'curtir'} ${qtdCurtidas(ev.id) ? `(${qtdCurtidas(ev.id)})` : ""}</button>
         ${extra}
+        ${ev.tipo === 'assistiu' && C().ligados() ? `<button class="btn98" data-comentar="${esc(ev.id)}" aria-expanded="${abertos.has(ev.id)}">💬 comentar${coments.length ? ` (${coments.length})` : ''}</button>` : ''}
         <a class="btn98" href="${Q().linkQuarto(p.id)}">🚪 ${p.id === 'eu' ? 'meu quartinho' : 'visitar quartinho'}</a>
       </footer>
+      ${ev.tipo === 'assistiu' ? htmlComentarios(ev, coments) : ''}
     </article>`;
+  }
+
+  // ---------- comentários nos posts ----------
+  const C = () => Q().comentarios;
+  const abertos = new Set(); // posts com a caixinha de comentar aberta
+  const postsNaTela = new Map(); // id do post → { p, f } (pra saber onde comentar)
+  function htmlComentarios(ev, coments) {
+    if (!C().ligados() || (!coments.length && !abertos.has(ev.id))) return '';
+    const meu = C().meuUid();
+    const lista = coments.map(c => {
+      const d = new Date(c.quando);
+      const qnd = isNaN(d) ? '' : `${fmtData(c.quando.slice(0, 10))} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const podeApagar = c.deUid === meu || ev.p.uid === meu;
+      return `<li><a class="post-nome" href="${Q().linkQuarto(c.deUid === meu ? 'eu' : c.de)}">@${esc(c.de)}</a> ${esc(c.texto)}
+        <small>${qnd}</small>${podeApagar ? ` <button class="link-botao apagar-coment" data-apagar-coment="${esc(String(c.id))}" aria-label="Apagar comentário">x</button>` : ''}</li>`;
+    }).join('');
+    const form = abertos.has(ev.id)
+      ? (C().tabelaOk()
+        ? `<form class="form-comentario" data-post="${esc(ev.id)}">
+            <input type="text" name="texto" maxlength="300" required placeholder="escreva um comentário..." aria-label="Comentário">
+            <button class="btn98" type="submit">enviar</button></form>`
+        : '<p class="aviso-coment">⚠ Os comentários ainda não foram ativados no banco (falta rodar <code>supabase/comentarios.sql</code> no Supabase).</p>')
+      : '';
+    return `<div class="comentarios-post">${lista ? `<ul>${lista}</ul>` : ''}${form}</div>`;
   }
 
   function htmlTvs() {
@@ -273,8 +317,38 @@ window.Feed = (function () {
       render();
       return;
     }
+    const comentar = e.target.closest('[data-comentar]');
+    if (comentar) {
+      const id = comentar.dataset.comentar;
+      if (abertos.has(id)) abertos.delete(id); else abertos.add(id);
+      render();
+      const campo = [...document.querySelectorAll('.form-comentario')].find(f => f.dataset.post === id);
+      if (campo) campo.elements.texto.focus();
+      return;
+    }
+    const apagar = e.target.closest('[data-apagar-coment]');
+    if (apagar) {
+      if (!confirm('Apagar esse comentário?')) return;
+      C().apagar(apagar.dataset.apagarComent).then(render).catch(err => alert('Não deu pra apagar: ' + err.message));
+      return;
+    }
     const pag = e.target.closest('[data-pagina]');
     if (pag) { pagina = Number(pag.dataset.pagina); render(); raiz.querySelector('.posts').scrollIntoView({ behavior: 'smooth' }); }
+  });
+
+  // enviar comentário
+  document.addEventListener('submit', e => {
+    const form = e.target.closest && e.target.closest('.form-comentario');
+    if (!form) return;
+    e.preventDefault();
+    const alvo = postsNaTela.get(form.dataset.post);
+    const texto = form.elements.texto.value.trim().slice(0, 300);
+    if (!alvo || !texto) return;
+    const botao = form.querySelector('button');
+    botao.disabled = true;
+    C().enviar(alvo.p, alvo.f, texto)
+      .then(() => { render(); })
+      .catch(err => { botao.disabled = false; alert('Não deu pra comentar: ' + err.message); });
   });
 
   document.addEventListener('submit', e => {
@@ -292,7 +366,7 @@ window.Feed = (function () {
     const meta = escolhaStatus && escolhaStatus.titulo === titulo ? escolhaStatus.meta : (anterior && anterior.meta) || null;
     const ano = escolhaStatus && escolhaStatus.titulo === titulo ? escolhaStatus.ano : '';
     if (acao === 'terminei') {
-      const novo = { titulo, ano: Number(ano) || '', nota: Number(fd.get('nota')) || 3, data: hoje() };
+      const novo = { id: window.U.novoId(), titulo, ano: Number(ano) || '', nota: Number(fd.get('nota')) || 3, data: hoje(), quando: new Date().toISOString() };
       if (comentario) novo.comentario = comentario;
       if (meta) novo.meta = meta;
       p.assistidos.unshift(novo);

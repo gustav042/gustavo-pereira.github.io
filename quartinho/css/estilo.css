@@ -933,3 +933,14 @@ body.editando-stickers .sticker.arrastando { cursor: grabbing; z-index: 2; }
 .lista-notif a.btn98 { color: #000; text-decoration: none; }
 @media (max-width: 520px) { .botao-notif { margin-left: 0; } }
 @media (prefers-reduced-motion: reduce) { .botao-notif.tem-novas { animation: none; } }
+
+/* comentários nos posts do feed */
+.comentarios-post { margin: 6px 0 0; padding: 6px 8px; background: #f3f3f3; border: 1px solid #c0c0c0; }
+.comentarios-post ul { list-style: none; margin: 0 0 4px; padding: 0; }
+.comentarios-post li { padding: 3px 0; border-bottom: 1px dotted #c0c0c0; word-break: break-word; }
+.comentarios-post li:last-child { border-bottom: 0; }
+.comentarios-post small { color: #777; font-size: .8em; margin-left: 4px; }
+.apagar-coment { color: #a00; margin-left: 4px; }
+.form-comentario { display: flex; gap: 6px; margin-top: 4px; }
+.form-comentario input { flex: 1; min-width: 0; font: inherit; padding: 2px 6px; border: 2px inset #fff; }
+.aviso-coment { margin: 4px 0 0; font-size: .9em; color: #7a4a00; }

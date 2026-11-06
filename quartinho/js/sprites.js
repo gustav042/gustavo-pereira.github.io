@@ -435,7 +435,37 @@ window.Sprites = (function () {
           + R(10, 10, 2, 1, 'rgba(255,255,255,.4)') + R(9, 10, 1, 1, '#111') + R(19, 17, 1, 1, '#111')
           + R(22, 10, 3, 2, '#888') + R(22, 13, 3, 2, '#888') + R(22, 17, 3, 1, '#222') + R(22, 19, 3, 1, '#222');
       },
-      brilhos: ctx => ctx.assistindo.titulo ? [{ x: 15, y: 14, r: 18, cor: '#7fb8ff' }] : []
+      brilhos: ctx => ctx.assistindo.titulo ? [{ x: 15, y: 14, r: 18, cor: '#7fb8ff' }] : [],
+      // de costas: a traseira da TV de tubo (com respiros e o cabo) em cima do rack
+      costas(p) {
+        return R(10, 0, 1, 2, '#999') + R(11, 2, 1, 2, '#999') + R(12, 4, 1, 2, '#999')
+          + R(22, 0, 1, 2, '#999') + R(21, 2, 1, 2, '#999') + R(20, 4, 1, 2, '#999')
+          + R(0, 20, 32, 12, p.o) + R(1, 21, 30, 4, p.t) + R(1, 21, 30, 1, p.h) + R(1, 25, 30, 6, p.f) + R(2, 27, 28, 1, p.s)
+          + R(1, 32, 2, 2, p.o) + R(29, 32, 2, 2, p.o)
+          + R(13, 5, 7, 2, '#333') + R(5, 6, 22, 17, '#1c1c1c') + R(6, 7, 20, 15, '#3a3a3a') + R(6, 7, 20, 1, '#5a5a5a')
+          + R(9, 9, 14, 11, '#2e2e2e') + R(10, 11, 12, 1, '#222') + R(10, 13, 12, 1, '#222') + R(10, 15, 12, 1, '#222') + R(10, 17, 12, 1, '#222')
+          + R(15, 22, 1, 3, '#111') + R(15, 24, 6, 1, '#111');
+      },
+      brilhosCostas: () => [],
+      // de lado (virada pra esquerda): rack comprido pra trás e a TV de perfil, com a tela pra esquerda
+      girado: {
+        w: 16, fh: 32, h: 46,
+        desenhar(p, ctx) {
+          const ligada = !!(ctx && ctx.assistindo && ctx.assistindo.titulo);
+          return R(7, 0, 1, 4, '#999') + R(9, 1, 1, 3, '#999')
+            // rack
+            + R(0, 16, 16, 28, p.o) + R(1, 17, 14, 20, p.t) + R(1, 17, 1, 20, p.h) + R(14, 17, 1, 20, p.s)
+            + R(1, 37, 14, 6, p.f) + R(1, 37, 14, 1, p.h) + R(3, 39, 10, 3, p.s) + R(7, 40, 2, 1, p.h)
+            + R(1, 43, 2, 3, p.o) + R(13, 43, 2, 3, p.o)
+            // TV de perfil
+            + R(3, 3, 11, 22, '#1c1c1c') + R(13, 6, 2, 16, '#1c1c1c')
+            + R(4, 4, 9, 9, '#4a4a4a') + R(4, 4, 9, 1, '#6a6a6a') + R(13, 7, 1, 6, '#3a3a3a')
+            + R(4, 13, 9, 11, '#3a3a3a') + R(4, 13, 9, 1, '#2a2a2a') + R(13, 13, 1, 8, '#2e2e2e')
+            + R(9, 16, 2, 2, '#888') + R(9, 19, 2, 2, '#888')
+            + R(3, 5, 1, 18, '#111') + (ligada ? R(3, 7, 1, 14, '#9fd0ff') : R(3, 7, 1, 14, '#777'));
+        },
+        brilhos: ctx => ctx.assistindo.titulo ? [{ x: 3, y: 14, r: 18, cor: '#7fb8ff' }] : []
+      }
     },
 
     pc: {

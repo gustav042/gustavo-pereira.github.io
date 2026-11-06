@@ -113,8 +113,8 @@ window.Conta = (function () {
     const seg = checar(await sb.from('seguindo').select('seguido').eq('seguidor', uid()));
     const ids = seg.map(s => s.seguido);
     const amigos = ids.length ? checar(await sb.from('perfis').select('id, usuario, dados').in('id', ids)) : [];
-    const recados = await recadosDe([uid(), ...ids]);
-    return { eu, amigos, seguindo: new Set(ids), recados };
+    const [recados, comentarios] = await Promise.all([recadosDe([uid(), ...ids]), comentariosDe([uid(), ...ids])]);
+    return { eu, amigos, seguindo: new Set(ids), recados, comentarios };
   }
   async function carregarPerfil(nomeUsuario) {
     const linha = checar(await sb.from('perfis').select('id, usuario, dados').eq('usuario', nomeUsuario).maybeSingle());
@@ -136,15 +136,35 @@ window.Conta = (function () {
   // ---------- seguidores e notificações ----------
   // Quem me segue (mais recentes primeiro) e os últimos recados que outras pessoas deixaram no meu mural.
   async function novidades() {
-    const [seg, rec] = await Promise.all([
+    const [seg, rec, com] = await Promise.all([
       sb.from('seguindo')
         .select('seguidor, criado_em, quem:perfis!seguindo_seguidor_fkey(usuario, nome:dados->>nome)')
         .eq('seguido', uid()).order('criado_em', { ascending: false }).limit(200),
       sb.from('recados')
         .select('id, de, texto, criado_em, autor:perfis!recados_de_fkey(usuario)')
-        .eq('para', uid()).neq('de', uid()).order('criado_em', { ascending: false }).limit(30)
+        .eq('para', uid()).neq('de', uid()).order('criado_em', { ascending: false }).limit(30),
+      comentariosNoMeu()
     ]);
-    return { seguidores: checar(seg), recados: checar(rec) };
+    return { seguidores: checar(seg), recados: checar(rec), comentarios: com };
+  }
+
+  // ---------- comentários nos posts do feed ----------
+  // Se a tabela ainda não existe (falta rodar supabase/comentarios.sql), devolve null em vez de quebrar.
+  const SEL_COMENT = 'id, dono, post, de, texto, criado_em, autor:perfis!comentarios_de_fkey(usuario)';
+  async function comentariosDe(donos) {
+    if (!donos.length) return [];
+    const { data, error } = await sb.from('comentarios').select(SEL_COMENT)
+      .in('dono', donos).order('criado_em', { ascending: true }).limit(1000);
+    return error ? null : data;
+  }
+  async function enviarComentario(dono, post, texto) {
+    return checar(await sb.from('comentarios').insert({ dono, post, de: uid(), texto }).select(SEL_COMENT).single());
+  }
+  async function apagarComentario(id) { checar(await sb.from('comentarios').delete().eq('id', Number(id))); }
+  async function comentariosNoMeu() {
+    const { data, error } = await sb.from('comentarios').select(SEL_COMENT)
+      .eq('dono', uid()).neq('de', uid()).order('criado_em', { ascending: false }).limit(30);
+    return error ? [] : data;
   }
 
   // ---------- recados ----------
@@ -189,6 +209,7 @@ window.Conta = (function () {
     usuarioLivre, criarConta, entrar, sair,
     meuPerfil, criarPerfil, salvarPerfil, aoSalvar: f => aoSalvarOuvintes.push(f),
     carregarRede, carregarPerfil, buscarPessoas, seguir, deixarDeSeguir, novidades,
+    comentariosDe, enviarComentario, apagarComentario,
     enviarRecado, apagarRecado, enviarImagem, preferencia, guardarPreferencia,
     USUARIO_OK
   };

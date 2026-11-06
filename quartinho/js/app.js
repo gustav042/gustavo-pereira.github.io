@@ -162,6 +162,8 @@
     <pattern id="fl-xadrez" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#e8e8e8"/><rect width="8" height="8" fill="#333"/><rect x="8" y="8" width="8" height="8" fill="#333"/></pattern>
     <pattern id="fl-ladrilho" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#e9e4da"/><rect y="15" width="16" height="1" fill="#bdb5a6"/><rect x="15" width="1" height="16" fill="#bdb5a6"/><rect x="1" y="1" width="6" height="1" fill="#f7f4ee"/></pattern>
     <linearGradient id="grad-tv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="stop-tv" stop-color="#7fb8ff" stop-opacity=".9"/><stop offset=".55" class="stop-tv" stop-color="#7fb8ff" stop-opacity=".3"/><stop offset="1" class="stop-tv" stop-color="#7fb8ff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="grad-tv-e" x1="1" y1="0" x2="0" y2="0"><stop offset="0" class="stop-tv" stop-color="#7fb8ff" stop-opacity=".9"/><stop offset=".55" class="stop-tv" stop-color="#7fb8ff" stop-opacity=".3"/><stop offset="1" class="stop-tv" stop-color="#7fb8ff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="grad-tv-d" x1="0" y1="0" x2="1" y2="0"><stop offset="0" class="stop-tv" stop-color="#7fb8ff" stop-opacity=".9"/><stop offset=".55" class="stop-tv" stop-color="#7fb8ff" stop-opacity=".3"/><stop offset="1" class="stop-tv" stop-color="#7fb8ff" stop-opacity="0"/></linearGradient>
     <radialGradient id="grad-tv-r"><stop offset="0" class="stop-tv" stop-color="#7fb8ff" stop-opacity=".9"/><stop offset="1" class="stop-tv" stop-color="#7fb8ff" stop-opacity="0"/></radialGradient>
     <linearGradient id="grad-pc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fe0d0" stop-opacity=".9"/><stop offset=".5" stop-color="#5fe0d0" stop-opacity=".3"/><stop offset="1" stop-color="#5fe0d0" stop-opacity="0"/></linearGradient>
     <linearGradient id="grad-pc-e" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#5fe0d0" stop-opacity=".9"/><stop offset=".5" stop-color="#5fe0d0" stop-opacity=".3"/><stop offset="1" stop-color="#5fe0d0" stop-opacity="0"/></linearGradient>
@@ -213,9 +215,18 @@
         }
       }
       if (it.id === 'tv' && ctx.assistindo.titulo) {
-        const sx = pos.x + 9, sy = pos.y + 10, chao = baseDe(it);
-        s += `<polygon class="luz-tv" fill="url(#grad-tv)" points="${sx},${sy + 8} ${sx + 11},${sy + 8} ${sx + 30},${chao + 30} ${sx - 19},${chao + 30}" opacity="${noite ? 0.5 : 0.22}"/>
-          <circle class="luz-tv" fill="url(#grad-tv-r)" cx="${sx + 5.5}" cy="${sy + 4}" r="${noite ? 18 : 12}" opacity="${noite ? 0.55 : 0.3}"/>`;
+        const f = forma(it);
+        if (f.direcao === 1 || f.direcao === 3) {
+          // de lado: a luz sai pela lateral, pra onde a tela aponta
+          const lado = f.direcao === 1 ? -1 : 1;
+          const sx = f.direcao === 1 ? pos.x + 3 : pos.x + f.w - 3, sy = pos.y + 6;
+          s += `<polygon class="luz-tv" fill="url(#grad-tv-${lado < 0 ? 'e' : 'd'})" points="${sx},${sy} ${sx},${sy + 16} ${sx + lado * 34},${sy + 40} ${sx + lado * 34},${sy - 6}" opacity="${noite ? 0.5 : 0.22}"/>
+            <circle class="luz-tv" fill="url(#grad-tv-r)" cx="${sx}" cy="${sy + 8}" r="${noite ? 16 : 10}" opacity="${noite ? 0.5 : 0.28}"/>`;
+        } else if (f.direcao !== 2) {
+          const sx = pos.x + 9, sy = pos.y + 10, chao = baseDe(it);
+          s += `<polygon class="luz-tv" fill="url(#grad-tv)" points="${sx},${sy + 8} ${sx + 11},${sy + 8} ${sx + 30},${chao + 30} ${sx - 19},${chao + 30}" opacity="${noite ? 0.5 : 0.22}"/>
+            <circle class="luz-tv" fill="url(#grad-tv-r)" cx="${sx + 5.5}" cy="${sy + 4}" r="${noite ? 18 : 12}" opacity="${noite ? 0.55 : 0.3}"/>`;
+        }
       }
       if (it.id === 'pc') {
         const f = forma(it), op = noite ? 0.45 : 0.16;
@@ -836,7 +847,7 @@
           const fd = new FormData(e.target);
           const titulo = String(fd.get('titulo')).trim();
           if (!titulo) return;
-          const novo = { titulo, ano: Number(fd.get('ano')) || '', nota: Number(fd.get('nota')) || 3, data: hoje() };
+          const novo = { id: window.U.novoId(), titulo, ano: Number(fd.get('ano')) || '', nota: Number(fd.get('nota')) || 3, data: hoje(), quando: new Date().toISOString() };
           const comentario = String(fd.get('comentario') || '').trim().slice(0, 280);
           if (comentario) novo.comentario = comentario;
           if (escolhido && escolhido.meta && escolhido.titulo === titulo) novo.meta = escolhido.meta;
@@ -937,7 +948,7 @@
           const f = e.target, fd = new FormData(f), p = perfil();
           if (f.dataset.lista !== undefined) p.listas[Number(f.dataset.lista)].itens.push(String(fd.get('item')).trim());
           else if (f.hasAttribute('data-nova-lista')) p.listas.push({ nome: String(fd.get('nome')).trim(), itens: [] });
-          else if (f.hasAttribute('data-diario')) p.diario.unshift({ data: hoje(), texto: String(fd.get('texto')).trim() });
+          else if (f.hasAttribute('data-diario')) p.diario.unshift({ data: hoje(), quando: new Date().toISOString(), texto: String(fd.get('texto')).trim() });
           mudou(); redesenhar();
         };
       }
@@ -974,7 +985,7 @@
               .catch(err => avisar('⚠ ' + err.message));
             return;
           }
-          perfil().recados.unshift({ de: String(fd.get('de')).trim(), texto, data: hoje() });
+          perfil().recados.unshift({ de: String(fd.get('de')).trim(), texto, data: hoje(), quando: new Date().toISOString() });
           mudou(); redesenhar();
         };
       }
@@ -1550,7 +1561,7 @@
     const { id, uid, usuario, recados, soVisita, ...resto } = p;
     return clonar(resto);
   }
-  const recadoDaLinha = r => ({ id: r.id, deUid: r.de, de: (r.autor && r.autor.usuario) || '?', texto: r.texto, data: String(r.criado_em).slice(0, 10) });
+  const recadoDaLinha = r => ({ id: r.id, deUid: r.de, de: (r.autor && r.autor.usuario) || '?', texto: r.texto, data: String(r.criado_em).slice(0, 10), quando: r.criado_em });
   function perfilDaLinha(linha, idLocal, recados) {
     const p = Object.assign(perfilNovo(linha.usuario), linha.dados || {});
     Object.assign(p, { id: idLocal, uid: linha.id, usuario: linha.usuario });
@@ -1616,7 +1627,8 @@
       estadoConta = Conta.configurado ? 'fora' : 'demo';
       perfis = carregar();
       seguindo = new Set();
-      novidades = { seguidores: [], recados: [] };
+      novidades = { seguidores: [], recados: [], comentarios: [] };
+      comentarios = [];
       atualId = 'eu'; Pet.estado = null;
       atualizarBotaoConta(); atualizarSino(); rota();
       return;
@@ -1634,6 +1646,8 @@
       for (const l of rede.amigos) novos[l.usuario] = perfilDaLinha(l, l.usuario, rede.recados);
       perfis = novos;
       seguindo = rede.seguindo;
+      comentariosOk = rede.comentarios !== null;
+      comentarios = (rede.comentarios || []).map(comentarioDaLinha);
       // conta criada levando o perfil de exemplo: limpa os filmes/listas/diário de mentira (uma vez)
       if (limparExemplos(perfis.eu)) Conta.salvarPerfil(dadosParaBanco(perfis.eu));
       estadoConta = 'dentro';
@@ -1685,14 +1699,31 @@
     for (const id of ['amigos', 'notificacoes']) if (JANELAS[id]._redesenhar && document.getElementById('jan-' + id)) JANELAS[id]._redesenhar();
   }
 
+  // ================= comentários nos posts do feed =================
+  // Cada filme da estante é um "post". Filmes novos têm id; os antigos usam título + data.
+  const postDe = f => f.id || `${f.titulo}|${f.data}`;
+  let comentarios = [];        // todos os comentários dos posts meus e de quem eu sigo
+  let comentariosOk = true;    // false quando a tabela ainda não existe no Supabase
+  const comentarioDaLinha = c => ({ id: c.id, dono: c.dono, post: c.post, deUid: c.de, de: (c.autor && c.autor.usuario) || '?', texto: c.texto, quando: c.criado_em });
+  async function recarregarComentarios() {
+    if (estadoConta !== 'dentro') return;
+    const donos = Object.values(perfis).filter(p => p.uid && !p.soVisita).map(p => p.uid);
+    const lista = await Conta.comentariosDe(donos).catch(() => null);
+    comentariosOk = lista !== null;
+    comentarios = (lista || []).map(comentarioDaLinha);
+    if (tela === 'feed') window.Feed.render();
+  }
+
   // ================= notificações (quem me seguiu, recados novos) =================
-  let novidades = { seguidores: [], recados: [] };
+  let novidades = { seguidores: [], recados: [], comentarios: [] };
   let vistoEm = '';            // até quando a pessoa já viu as notificações (fica na conta)
   const conhecidas = new Set(); // o que já apareceu nesta aba (pra avisar só do que é novo mesmo)
-  const chaveNotif = n => n.tipo === 'seguiu' ? 's' + n.uid + n.quando : 'r' + n.id;
+  const chaveNotif = n => n.tipo === 'seguiu' ? 's' + n.uid + n.quando : n.tipo === 'comentario' ? 'c' + n.id : 'r' + n.id;
+  const tituloDoPost = post => { const f = (perfis.eu.assistidos || []).find(x => postDe(x) === post); return f ? f.titulo : 'um filme'; };
   function listaNotificacoes() {
     const l = novidades.seguidores.filter(s => s.quem).map(s => ({ tipo: 'seguiu', uid: s.seguidor, usuario: s.quem.usuario, quando: s.criado_em }))
-      .concat(novidades.recados.map(r => ({ tipo: 'recado', id: r.id, usuario: (r.autor && r.autor.usuario) || '?', texto: r.texto, quando: r.criado_em })));
+      .concat(novidades.recados.map(r => ({ tipo: 'recado', id: r.id, usuario: (r.autor && r.autor.usuario) || '?', texto: r.texto, quando: r.criado_em })))
+      .concat((novidades.comentarios || []).map(c => ({ tipo: 'comentario', id: c.id, usuario: (c.autor && c.autor.usuario) || '?', texto: c.texto, titulo: tituloDoPost(c.post), quando: c.criado_em })));
     return l.sort((a, b) => String(b.quando).localeCompare(String(a.quando))).slice(0, 40);
   }
   const contarNovas = () => listaNotificacoes().filter(n => n.quando > vistoEm).length;
@@ -1713,7 +1744,11 @@
     lista.forEach(n => conhecidas.add(chaveNotif(n)));
     if (avisarNovas && novas.length) {
       const n = novas[0];
-      avisar(n.tipo === 'seguiu' ? `🔔 @${n.usuario} começou a seguir você!` : `🔔 @${n.usuario} deixou um recado no seu mural`);
+      avisar(n.tipo === 'seguiu' ? `🔔 @${n.usuario} começou a seguir você!`
+        : n.tipo === 'comentario' ? `🔔 @${n.usuario} comentou no seu post de ${n.titulo}`
+          : `🔔 @${n.usuario} deixou um recado no seu mural`);
+      // comentário novo no meu post: atualiza o feed também
+      if (novas.some(x => x.tipo === 'comentario')) recarregarComentarios();
     }
     atualizarSino();
     redesenharJanelasConta();
@@ -1743,6 +1778,11 @@
         if (n.tipo === 'seguiu') {
           return `<li${novo}><p>👤 <a href="#quarto/${esc(n.usuario)}">@${esc(n.usuario)}</a> começou a seguir você <small>${data}</small></p>
             <span class="acoes">${seguindo.has(n.uid) ? '<button class="btn98" disabled>✓ vocês se seguem</button>' : `<button class="btn98" data-seguir="${esc(n.uid)}">+ seguir de volta</button>`}</span></li>`;
+        }
+        if (n.tipo === 'comentario') {
+          return `<li${novo}><p>💬 <a href="#quarto/${esc(n.usuario)}">@${esc(n.usuario)}</a> comentou no seu post de <b>${esc(n.titulo)}</b> <small>${data}</small></p>
+            <blockquote class="texto-recado">${esc(n.texto)}</blockquote>
+            <span class="acoes"><a class="btn98" href="#feed">🏠 ver no feed</a></span></li>`;
         }
         return `<li${novo}><p>💌 <a href="#quarto/${esc(n.usuario)}">@${esc(n.usuario)}</a> deixou um recado <small>${data}</small></p>
           <blockquote class="texto-recado">${esc(n.texto)}</blockquote>
@@ -1900,7 +1940,22 @@
     salvar,
     avatar: p => urlSegura(p.avatar) ? `<img src="${esc(urlSegura(p.avatar))}" alt="">` : avatarPadrao(p),
     linkQuarto,
-    trofeus: p => TROFEUS.filter(t => t.ok(p))
+    trofeus: p => TROFEUS.filter(t => t.ok(p)),
+    // comentários nos posts (só com conta)
+    comentarios: {
+      ligados: () => estadoConta === 'dentro',
+      tabelaOk: () => comentariosOk,
+      doPost: (p, f) => p.uid ? comentarios.filter(c => c.dono === p.uid && c.post === postDe(f)) : [],
+      meuUid: () => Conta.uid(),
+      async enviar(p, f, texto) {
+        const linha = await Conta.enviarComentario(p.uid, postDe(f), texto);
+        comentarios.push(comentarioDaLinha(linha));
+      },
+      async apagar(id) {
+        await Conta.apagarComentario(id);
+        comentarios = comentarios.filter(c => c.id !== Number(id) && String(c.id) !== String(id));
+      }
+    }
   };
 
   contarVisita();
