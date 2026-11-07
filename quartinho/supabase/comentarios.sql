@@ -18,6 +18,9 @@ create policy "comentários visíveis" on public.comentarios
 drop policy if exists "comentário só no próprio nome" on public.comentarios;
 create policy "comentário só no próprio nome" on public.comentarios
   for insert to authenticated with check (auth.uid() = de);
+drop policy if exists "editar comentário próprio" on public.comentarios;
+create policy "editar comentário próprio" on public.comentarios
+  for update to authenticated using (auth.uid() = de) with check (auth.uid() = de);
 drop policy if exists "apagar comentário meu ou do meu post" on public.comentarios;
 create policy "apagar comentário meu ou do meu post" on public.comentarios
   for delete to authenticated using (auth.uid() = de or auth.uid() = dono);

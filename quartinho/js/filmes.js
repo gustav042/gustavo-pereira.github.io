@@ -1,7 +1,7 @@
 // Informações de filmes e séries: busca no TMDB (a chave do site fica em js/config.js).
 //
 // Cada filme guardado pode ter um `meta` com: tipo ('filme' | 'serie'), generos, duracao (min),
-// diretor, elenco, pais (códigos ISO), nota (média do TMDB, 0–10), poster (URL) e temporadas (séries).
+// diretor, elenco, pais (códigos ISO), nota (média do TMDB, 0–10), poster (URL), sinopse e temporadas (séries).
 window.Filmes = (function () {
   'use strict';
   const CHAVE_LS = 'quartinho:tmdbChave';
@@ -103,7 +103,7 @@ window.Filmes = (function () {
 
   async function detalhes(item) {
     const k = item.tipo + ':' + item.id;
-    if (cache[k]) return cache[k];
+    if (cache[k] && cache[k].meta && Object.prototype.hasOwnProperty.call(cache[k].meta, 'sinopse')) return cache[k];
     const filme = item.tipo === 'filme';
     const d = await chamar(filme ? `/movie/${item.id}` : `/tv/${item.id}`, { append_to_response: 'credits' });
     const creditos = d.credits || {};
@@ -118,6 +118,7 @@ window.Filmes = (function () {
       pais: filme ? (d.production_countries || []).map(p => p.iso_3166_1) : (d.origin_country || []),
       nota: Math.round((d.vote_average || 0) * 10) / 10,
       poster: d.poster_path ? IMG + d.poster_path : '',
+      sinopse: d.overview || '',
       temporadas: filme ? null : (d.seasons || []).filter(s => s.season_number > 0).map(s => ({ n: s.season_number, episodios: s.episode_count }))
     };
     const res = { titulo: d.title || d.name, ano: String(d.release_date || d.first_air_date || '').slice(0, 4), meta };

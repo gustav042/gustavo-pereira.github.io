@@ -83,9 +83,12 @@ window.Feed = (function () {
             <p class="titulo-filme">${esc(f.titulo)} ${f.ano ? `<small>(${esc(f.ano)})</small>` : ''}</p>
             ${meta && meta.generos.length ? `<p class="tags-genero">${meta.generos.slice(0, 3).map(g => `<span>${esc(g)}</span>`).join('')}</p>` : ''}
             <p class="estrelas-feed" aria-label="nota ${f.nota} de 5">${estrelas(f.nota)}</p>
+            ${meta && meta.sinopse ? (meta.sinopse.length > 240
+              ? `<details class="sinopse-filme"><summary>${esc(meta.sinopse.slice(0, 237))}… <span>ler sinopse completa</span></summary><p>${esc(meta.sinopse.slice(237))}</p></details>`
+              : `<p class="sinopse-filme">${esc(meta.sinopse)}</p>`) : ''}
             ${f.comentario
               ? `<blockquote class="comentario-filme">“${esc(f.comentario)}”</blockquote>`
-              : `<p class="comentario-nota">${['', 'socorro, que bomba 💀', 'meh...', 'legalzinho', 'muito bom!!', 'OBRA-PRIMA ♥♥♥'][f.nota] || ''}</p>`}
+              : ''}
           </div>
         </div>`;
       if (p.id !== 'eu') {
@@ -105,6 +108,7 @@ window.Feed = (function () {
     const curtido = !!curtidas[ev.id];
     const coments = ev.tipo === 'assistiu' ? C().doPost(p, ev.f) : [];
     if (ev.tipo === 'assistiu') postsNaTela.set(ev.id, { p, f: ev.f });
+    const editandoPost = editandoPosts.has(ev.id);
     return `<article class="post post-${ev.tipo}">
       <header class="post-topo">
         ${miniAvatar(p)}
@@ -115,9 +119,19 @@ window.Feed = (function () {
       <footer class="post-rodape">
         <button class="btn98 ${curtido ? 'curtido' : ''}" data-curtir="${esc(ev.id)}" aria-pressed="${curtido}">👍 ${curtido ? 'curtiu' : 'curtir'} ${qtdCurtidas(ev.id) ? `(${qtdCurtidas(ev.id)})` : ""}</button>
         ${extra}
+        ${ev.tipo === 'assistiu' && p.id === 'eu' ? `<button class="btn98" data-editar-post="${esc(ev.id)}">${editandoPost ? '✖ cancelar edição' : '✏️ editar post'}</button>` : ''}
         ${ev.tipo === 'assistiu' && C().ligados() ? `<button class="btn98" data-comentar="${esc(ev.id)}" aria-expanded="${abertos.has(ev.id)}">💬 comentar${coments.length ? ` (${coments.length})` : ''}</button>` : ''}
         <a class="btn98" href="${Q().linkQuarto(p.id)}">🚪 ${p.id === 'eu' ? 'meu quartinho' : 'visitar quartinho'}</a>
       </footer>
+      ${editandoPost ? `<form class="form-editar-post" data-editar-post-form="${esc(ev.id)}">
+        <label class="campo"><span>Título</span><input type="text" name="titulo" maxlength="80" required value="${esc(ev.f.titulo)}"></label>
+        <div class="linha">
+          <label class="campo curto"><span>Ano</span><input type="number" name="ano" min="1888" max="2100" value="${esc(ev.f.ano || '')}"></label>
+          <label class="campo"><span>Nota</span>${window.U.campoNota(ev.f.nota)}</label>
+        </div>
+        <label class="campo"><span>Comentário (opcional)</span><textarea name="comentario" maxlength="280" rows="2">${esc(ev.f.comentario || '')}</textarea></label>
+        <button class="btn98" type="submit">Salvar alterações</button>
+      </form>` : ''}
       ${ev.tipo === 'assistiu' ? htmlComentarios(ev, coments) : ''}
     </article>`;
   }
@@ -125,6 +139,8 @@ window.Feed = (function () {
   // ---------- comentários nos posts ----------
   const C = () => Q().comentarios;
   const abertos = new Set(); // posts com a caixinha de comentar aberta
+  const editandoPosts = new Set();
+  const editandoComentarios = new Set();
   const postsNaTela = new Map(); // id do post → { p, f } (pra saber onde comentar)
   function htmlComentarios(ev, coments) {
     if (!C().ligados() || (!coments.length && !abertos.has(ev.id))) return '';
@@ -133,8 +149,17 @@ window.Feed = (function () {
       const d = new Date(c.quando);
       const qnd = isNaN(d) ? '' : `${fmtData(c.quando.slice(0, 10))} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       const podeApagar = c.deUid === meu || ev.p.uid === meu;
-      return `<li><a class="post-nome" href="${Q().linkQuarto(c.deUid === meu ? 'eu' : c.de)}">@${esc(c.de)}</a> ${esc(c.texto)}
-        <small>${qnd}</small>${podeApagar ? ` <button class="link-botao apagar-coment" data-apagar-coment="${esc(String(c.id))}" aria-label="Apagar comentário">x</button>` : ''}</li>`;
+      const editando = editandoComentarios.has(String(c.id));
+      const autor = { id: c.deUid, nome: c.de, avatar: c.avatar, corDestaque: '#ff66cc' };
+      return `<li>${miniAvatar(autor)}<span class="comentario-conteudo">${editando
+        ? `<form class="form-comentario form-editar-comentario" data-editar-coment="${esc(String(c.id))}">
+            <input type="text" name="texto" maxlength="300" required value="${esc(c.texto)}" aria-label="Editar comentário">
+            <button class="btn98" type="submit">salvar</button>
+            <button class="btn98" type="button" data-cancelar-edicao-coment="${esc(String(c.id))}">cancelar</button>
+          </form>`
+        : `<a class="post-nome" href="${Q().linkQuarto(c.deUid === meu ? 'eu' : c.de)}">@${esc(c.de)}</a> ${esc(c.texto)}
+          <small>${qnd}</small>${c.deUid === meu ? ` <button class="link-botao" data-editar-coment="${esc(String(c.id))}" aria-label="Editar comentário">editar</button>` : ''}
+          ${podeApagar ? ` <button class="link-botao apagar-coment" data-apagar-coment="${esc(String(c.id))}" aria-label="Apagar comentário">x</button>` : ''}`}</span></li>`;
     }).join('');
     const form = abertos.has(ev.id)
       ? (C().tabelaOk()
@@ -177,7 +202,7 @@ window.Feed = (function () {
         <div class="linha">
           <button class="btn98" type="submit" name="acao" value="vendo">📺 tô assistindo</button>
           <span class="ou">ou</span>
-          <label class="campo curto"><span>Nota</span><select name="nota">${[5, 4, 3, 2, 1].map(n => `<option value="${n}">${'★'.repeat(n)}</option>`).join('')}</select></label>
+          <label class="campo"><span>Nota</span>${window.U.campoNota(3)}</label>
           <button class="btn98" type="submit" name="acao" value="terminei">✔ terminei de ver</button>
           <span class="msg" role="status"></span>
         </div>
@@ -268,6 +293,30 @@ window.Feed = (function () {
     });
   }
 
+  function htmlPessoasParaSeguir() {
+    const q = Q();
+    if (!q.contaLogada()) {
+      return `<section class="caixa-feed">
+        <h2 class="titulo-caixa">🤝 pessoas para seguir</h2>
+        <p>Entre na sua conta para descobrir pessoas e seguir outros quartinhos.</p>
+        <button class="btn98" data-acao="conta">👤 entrar ou criar conta</button>
+      </section>`;
+    }
+    if (q.erroSugestoes()) {
+      return `<section class="caixa-feed"><h2 class="titulo-caixa">🤝 pessoas para seguir</h2>
+        <p>Não foi possível carregar sugestões agora.</p></section>`;
+    }
+    const seguindo = q.seguindoIds();
+    const pessoas = q.pessoasParaSeguir().filter(p => !seguindo.has(p.id));
+    const lista = pessoas.length ? `<ul class="lista-seguir-feed">${pessoas.map(p => `
+      <li><a class="seguir-feed-perfil" href="${q.linkQuarto(p.usuario)}">
+        <span class="mini-av">${q.avatar(p)}</span>
+        <span><b>${esc(p.nome || p.usuario)}</b><small>@${esc(p.usuario)}${p.humor ? ` · ${esc(p.humor)}` : ''}</small></span>
+      </a><button class="btn98" data-seguir="${esc(p.id)}">+ seguir</button></li>`).join('')}</ul>`
+      : `<p>${q.sugestoesCarregando() ? 'procurando pessoas...' : 'não há novas pessoas para seguir por enquanto.'}</p>`;
+    return `<section class="caixa-feed"><h2 class="titulo-caixa">🤝 pessoas para seguir</h2>${lista}</section>`;
+  }
+
   // ---------- render ----------
   function render() {
     const raiz = document.getElementById('tela-feed');
@@ -281,6 +330,7 @@ window.Feed = (function () {
         <div class="feed-centro">
           ${htmlStatus()}
           ${htmlTvs()}
+          ${htmlPessoasParaSeguir()}
           <section class="caixa-feed">
             <h2 class="titulo-caixa">✨ atualizações dos amigos</h2>
             <div class="posts">${posts.map(htmlPost).join('<div class="divisor" aria-hidden="true">~*~*~*~</div>')}</div>
@@ -292,6 +342,7 @@ window.Feed = (function () {
           </section>
         </div>
       </div>`;
+    window.U.prepararNotas(raiz);
     prepararStatus();
   }
 
@@ -326,6 +377,28 @@ window.Feed = (function () {
       if (campo) campo.elements.texto.focus();
       return;
     }
+    const editarPost = e.target.closest('[data-editar-post]');
+    if (editarPost) {
+      const id = editarPost.dataset.editarPost;
+      if (editandoPosts.has(id)) editandoPosts.delete(id); else editandoPosts.add(id);
+      render();
+      return;
+    }
+    const editarComentario = e.target.closest('[data-editar-coment]');
+    if (editarComentario) {
+      const id = editarComentario.dataset.editarComent;
+      editandoComentarios.add(id);
+      render();
+      const form = [...document.querySelectorAll('.form-editar-comentario')].find(x => x.dataset.editarComent === id);
+      if (form) form.elements.texto.focus();
+      return;
+    }
+    const cancelarComentario = e.target.closest('[data-cancelar-edicao-coment]');
+    if (cancelarComentario) {
+      editandoComentarios.delete(cancelarComentario.dataset.cancelarEdicaoComent);
+      render();
+      return;
+    }
     const apagar = e.target.closest('[data-apagar-coment]');
     if (apagar) {
       if (!confirm('Apagar esse comentário?')) return;
@@ -338,6 +411,45 @@ window.Feed = (function () {
 
   // enviar comentário
   document.addEventListener('submit', e => {
+    const editarPost = e.target.closest && e.target.closest('.form-editar-post');
+    if (editarPost) {
+      e.preventDefault();
+      const alvo = postsNaTela.get(editarPost.dataset.editarPostForm);
+      if (!alvo || alvo.p.id !== 'eu') return;
+      const f = alvo.f;
+      const titulo = editarPost.elements.titulo.value.trim();
+      if (!titulo) return;
+      if (titulo !== f.titulo) {
+        if (!f.id && !f.postKey) f.postKey = `${f.titulo}|${f.data}`;
+        delete f.meta;
+        f.titulo = titulo;
+      }
+      f.ano = Number(editarPost.elements.ano.value) || '';
+      f.nota = Number(editarPost.elements.nota.value) || 0.5;
+      const comentario = editarPost.elements.comentario.value.trim().slice(0, 280);
+      if (comentario) f.comentario = comentario; else delete f.comentario;
+      editandoPosts.delete(editarPost.dataset.editarPostForm);
+      Q().salvar();
+      render();
+      return;
+    }
+    const editarComentario = e.target.closest && e.target.closest('.form-editar-comentario');
+    if (editarComentario) {
+      e.preventDefault();
+      const id = editarComentario.dataset.editarComent;
+      const texto = editarComentario.elements.texto.value.trim().slice(0, 300);
+      if (!texto) return;
+      const botao = editarComentario.querySelector('[type=submit]');
+      botao.disabled = true;
+      C().editar(id, texto).then(() => {
+        editandoComentarios.delete(id);
+        render();
+      }).catch(err => {
+        botao.disabled = false;
+        alert('Não deu pra editar: ' + err.message);
+      });
+      return;
+    }
     const form = e.target.closest && e.target.closest('.form-comentario');
     if (!form) return;
     e.preventDefault();

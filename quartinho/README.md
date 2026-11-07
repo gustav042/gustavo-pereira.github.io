@@ -31,7 +31,9 @@ conta), o site funciona no **modo local**: um quartinho só seu, salvo no navega
 1. Crie uma conta grátis em supabase.com e um **New project** (região *South America (São Paulo)*).
    Guarde a senha do banco que ele pede.
 2. Abra **SQL Editor → New query**, cole todo o arquivo `supabase/schema.sql` e clique em **Run**.
-   Isso cria as tabelas (`perfis`, `recados`, `seguindo`), o espaço de imagens e as regras de segurança.
+   Isso cria as tabelas (`perfis`, `recados`, `seguindo`, `visitas_quarto`), o espaço de imagens e as regras de segurança.
+   Se o banco já existia, rode `supabase/visitas.sql` para ativar a contagem compartilhada dos quartinhos.
+   Se os comentários já estavam ativados, rode `supabase/comentarios.sql` de novo para liberar a edição dos próprios comentários.
 3. Em **Authentication → URL Configuration**:
    - *Site URL*: `https://gustavo-pereira.github.io/quartinho/`
    - *Redirect URLs*: adicione também `http://127.0.0.1:5173/**` (pra testar no computador).
@@ -42,6 +44,7 @@ conta), o site funciona no **modo local**: um quartinho só seu, salvo no navega
 
 Depois disso aparece **👤 Entrar** no topo: dá pra criar conta (levando o quartinho do navegador junto),
 procurar amigos pelo @usuario, seguir, visitar e deixar recados. O perfil salva sozinho na nuvem.
+As visitas aos perfis com conta são contadas no banco e compartilhadas; no modo local, a contagem fica neste navegador.
 
 Observação: no plano grátis, o Supabase pausa o projeto depois de uma semana sem nenhum acesso
 (é só entrar no painel e reativar).
@@ -49,14 +52,22 @@ Observação: no plano grátis, o Supabase pausa o projeto depois de uma semana 
 ## O que já tem
 
 - **Estatísticas (📊)**: gêneros favoritos, décadas, horas de filme, notas comparadas com a média do mundo,
-  diretores, países e compatibilidade com os amigos (também aparece na lista do MSN).
+  diretores, países e compatibilidade com os amigos. Os cartões aparecem no próprio quartinho e nos visitados,
+  ao lado e abaixo do quarto; cada pessoa escolhe quais exibir em “Decorar e mudar a vibe”. A compatibilidade
+  aparece apenas no próprio quarto, e os quartinhos visitados também mostram seus seguidores. No rodapé, o
+  contador mostra as visitas ao quartinho aberto. No computador, arraste diretamente os cartões de estatísticas
+  e da lateral (ou use as setas do teclado na alça de cada cartão); “Restaurar posições dos cartões”
+  desfaz a organização. As posições são salvas no perfil e aparecem para as visitas no desktop; no celular,
+  os cartões seguem o layout automático. O estilo das caixas do blog também vale para as estatísticas do quarto.
 
 - **Feed (🏠 Início)**: "o que você tá vendo?" (status / terminei de ver), mini TVs com o que cada amigo está
-  assistindo, linha do tempo (assistiu, diário, recados) com curtir, "+ quero ver" e "visitar quartinho",
+  assistindo, linha do tempo (assistiu, diário, recados) com notas de meia estrela, sinopses expansíveis,
+  edição dos próprios posts e comentários, curtir, "+ quero ver" e "visitar quartinho",
   lista de amigos estilo MSN e "mais vistos pela galera". Endereços: `#feed`, `#quarto`, `#quarto/ana`, `#quarto/ana/mural`.
 
-- **Quarto clicável**: estante de DVDs (filmes assistidos), pôsteres (favoritos), TV (assistindo agora),
-  computador (listas e diário), mural (recados), prateleira de troféus (conquistas), aparelho de som (liga a música).
+- **Quarto clicável**: pixel art com texturas, detalhes e sombras; estante de DVDs (filmes assistidos),
+  pôsteres (favoritos), TV (assistindo agora), computador (listas e diário), mural (recados),
+  prateleira de troféus (conquistas), aparelho de som (liga a música).
 - **Arrumar móveis**: arrastar, adicionar do catálogo, trocar modelo (3 de cama, tapete, assento, armário,
   criado-mudo, luminária e planta), trocar cor/material, girar (camas, tapetes e assentos) e remover.
   Atalhos: setas ajustam a posição, R gira, Delete tira do quarto.
@@ -70,7 +81,7 @@ Observação: no plano grátis, o Supabase pausa o projeto depois de uma semana 
 - **Stickers**: pixel art original, selinhos estilo "blinkie" (prontos ou com seu texto) e stickers com sua imagem.
   Dá pra arrastar, girar e mudar o tamanho; cada um fica preso no pedaço da página onde foi solto
   (título, quarto ou lateral), então continua no lugar certo no celular.
-- **Amigos**: com conta, dá pra procurar pessoas pelo @usuario, seguir, ver quem te segue e receber notificações (🔔).
+- **Amigos**: com conta, dá pra procurar pessoas pelo @usuario, seguir, ver quem te segue, descobrir pessoas para seguir no feed e receber notificações (🔔).
 
 Os dados ficam no `localStorage` do navegador (ainda não há servidor/contas).
 
@@ -89,6 +100,7 @@ quartinho/
   js/conta.js       contas no Supabase (login, perfis, recados, seguir, imagens)
   js/supabase-config.js  endereço e chave pública do projeto Supabase
   supabase/schema.sql    tabelas e regras de segurança do banco
+  supabase/visitas.sql   migração do contador de visitas para bancos já existentes
   js/app.js         quarto, arrastar móveis, bichinho, janelas, navegação
   assets/           sprites/imagens de terceiros (ver abaixo)
 ```

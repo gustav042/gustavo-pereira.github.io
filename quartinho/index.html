@@ -29,18 +29,22 @@
     <main class="conteudo" id="tela-quarto">
       <header id="cabecalho-blog" class="cabecalho-blog"></header>
       <aside class="perfil-lateral" id="lateral"></aside>
-      <section class="area-quarto" aria-label="Quarto">
-        <p id="visitando" class="visitando" hidden></p>
-        <div class="moldura-quarto">
-          <div id="quarto"></div>
-          <div id="efeitos" class="efeitos" aria-hidden="true"></div>
-        </div>
-        <p class="dica-uso">✦ clique nas coisas do quarto pra explorar · faça carinho no bichinho ✦</p>
-      </section>
+      <aside class="stats stats-lateral" id="stats-lateral" hidden></aside>
+      <div class="coluna-quartinho">
+        <section class="area-quarto" aria-label="Quarto">
+          <p id="visitando" class="visitando" hidden></p>
+          <div class="moldura-quarto">
+            <div id="quarto"></div>
+            <div id="efeitos" class="efeitos" aria-hidden="true"></div>
+          </div>
+          <p class="dica-uso">✦ clique nas coisas do quarto pra explorar · faça carinho no bichinho ✦</p>
+        </section>
+        <section class="stats stats-quarto" id="stats-quarto" hidden aria-label="Estatísticas do perfil"></section>
+      </div>
     </main>
 
     <footer class="rodape">
-      visitas: <span id="contador" class="contador-visitas">000000</span>
+      visitas deste quartinho: <span id="contador" class="contador-visitas">000000</span>
       · melhor visualizado em 1024x768 · feito com ♥ e html
       <p class="creditos-tmdb">
         Informações de filmes e séries: <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a>.

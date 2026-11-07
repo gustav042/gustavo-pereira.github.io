@@ -71,6 +71,41 @@ drop policy if exists "deixar de seguir" on public.seguindo;
 create policy "deixar de seguir" on public.seguindo
   for delete to authenticated using (auth.uid() = seguidor);
 
+-- ========== visitas aos quartinhos ==========
+create table if not exists public.visitas_quarto (
+  perfil uuid primary key references public.perfis (id) on delete cascade,
+  total bigint not null default 0 check (total >= 0),
+  atualizado_em timestamptz not null default now()
+);
+alter table public.visitas_quarto enable row level security;
+revoke all on public.visitas_quarto from anon, authenticated;
+
+create or replace function public.registrar_visita_quarto(p_perfil uuid)
+returns bigint
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  novo_total bigint;
+begin
+  if auth.uid() is null then
+    raise exception 'Autenticação necessária';
+  end if;
+
+  insert into public.visitas_quarto (perfil, total)
+  values (p_perfil, 1)
+  on conflict (perfil) do update
+    set total = public.visitas_quarto.total + 1,
+        atualizado_em = now()
+  returning total into novo_total;
+
+  return novo_total;
+end;
+$$;
+revoke all on function public.registrar_visita_quarto(uuid) from public;
+grant execute on function public.registrar_visita_quarto(uuid) to authenticated;
+
 -- ========== imagens enviadas (pôsteres, fundo do blog, stickers) ==========
 -- cada pessoa só envia/apaga dentro da pasta com o próprio id
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -105,6 +140,9 @@ create policy "comentários visíveis" on public.comentarios
 drop policy if exists "comentário só no próprio nome" on public.comentarios;
 create policy "comentário só no próprio nome" on public.comentarios
   for insert to authenticated with check (auth.uid() = de);
+drop policy if exists "editar comentário próprio" on public.comentarios;
+create policy "editar comentário próprio" on public.comentarios
+  for update to authenticated using (auth.uid() = de) with check (auth.uid() = de);
 drop policy if exists "apagar comentário meu ou do meu post" on public.comentarios;
 create policy "apagar comentário meu ou do meu post" on public.comentarios
   for delete to authenticated using (auth.uid() = de or auth.uid() = dono);

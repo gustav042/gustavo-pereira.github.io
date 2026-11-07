@@ -9,6 +9,11 @@ window.Stats = (function () {
   const media = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
   const CORES = ['#ff66cc', '#4fc3f7', '#ffd23f', '#6bb366', '#9a76d4', '#ff7043', '#26a69a', '#e57373'];
+  const CARTOES = [
+    ['numeros', 'Em números'], ['generos', 'Gêneros favoritos'], ['decadas', 'Por década'],
+    ['exigencia', 'Exigente ou pega leve?'], ['notas', 'Como dá notas'], ['diretores', 'Diretores mais vistos'],
+    ['paises', 'Volta ao mundo'], ['atores', 'Atores que mais aparecem'], ['compat', 'Compatibilidade']
+  ];
   const PERSONALIDADE = {
     'Terror': 'alma corajosa do sofá 👻', 'Comédia': 'fábrica de risadas 😂', 'Romance': 'coração mole 💘',
     'Animação': 'criança interior intacta 🧸', 'Ação': 'pura adrenalina 💥', 'Ficção científica': 'viagem pelas galáxias 🚀',
@@ -51,7 +56,8 @@ window.Stats = (function () {
       diretores: contar(com.flatMap(x => x.m.diretor ? [x.m.diretor] : [])).slice(0, 5),
       atores: contar(com.flatMap(x => x.m.elenco || [])).filter(([, n]) => n > 1).slice(0, 5),
       paises: contar(com.flatMap(x => x.m.pais || [])),
-      notas: [5, 4, 3, 2, 1].map(n => ({ n, qtd: itens.filter(x => x.f.nota === n).length }))
+      notas: [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5]
+        .map(n => ({ n, qtd: itens.filter(x => x.f.nota === n).length }))
     };
   }
 
@@ -70,7 +76,7 @@ window.Stats = (function () {
     const cosseno = na && nb ? dot / Math.sqrt(na * nb) : 0;
     const notasA = new Map((a.assistidos || []).map(f => [norm(f.titulo), f]));
     const comuns = (b.assistidos || []).filter(f => notasA.has(norm(f.titulo)));
-    const parecidas = comuns.map(f => 1 - Math.abs(f.nota - notasA.get(norm(f.titulo)).nota) / 4);
+    const parecidas = comuns.map(f => 1 - Math.abs(f.nota - notasA.get(norm(f.titulo)).nota) / 4.5);
     let s = parecidas.length ? 0.55 * cosseno + 0.45 * media(parecidas) : cosseno * 0.85;
     s += Math.min(0.1, comuns.length * 0.03);
     const pct = Math.round(limitar(s, 0, 1) * 100);
@@ -96,22 +102,24 @@ window.Stats = (function () {
         <span class="barra" style="height:${Math.max(6, it.n / max * 100)}%;--cor:${CORES[k % CORES.length]}"></span>
         <span class="rotulo">${esc(it.nome)}</span></div>`).join('')}</div>`;
   }
+  function barrasNotas(itens) {
+    if (!itens.length) return '<p class="vazio">sem dados ainda</p>';
+    const max = Math.max(...itens.map(i => i.qtd));
+    return `<ul class="barras-h barras-notas">${itens.map((it, k) => `
+      <li><span class="rotulo estrelas-feed" aria-label="nota ${it.n.toLocaleString('pt-BR')} de 5">${estrelas(it.n)}</span>
+        <span class="trilho"><span class="barra" style="width:${Math.max(4, it.qtd / max * 100)}%;--cor:${CORES[k % CORES.length]}"></span></span>
+        <span class="valor">${it.qtd}</span></li>`).join('')}</ul>`;
+  }
   function tempo(min) {
     const h = Math.floor(min / 60), d = Math.floor(h / 24);
     return d ? `${d} dia${d > 1 ? 's' : ''} e ${h % 24}h` : `${h}h${String(min % 60).padStart(2, '0')}`;
   }
   const janela = (titulo, corpo, classe = '') => `<section class="relatorio ${classe}"><h3 class="titulo-caixa">${titulo}</h3><div class="relatorio-corpo">${corpo}</div></section>`;
 
-  // ---------- página ----------
-  function render(id) {
-    const perfis = Q().perfis();
-    const p = perfis[id] || perfis.eu;
-    const eu = perfis.eu;
-    const ehEu = p.id === 'eu';
+  function criarCartoes(p, perfis) {
     const r = resumo(p);
-    const topo = r.generos[0];
+    const ehEu = p.id === 'eu';
     const voce = ehEu ? 'você' : esc(p.nome);
-
     const ex = r.exigencia;
     let exigencia = '<p class="vazio">precisa de filmes com nota do TMDB</p>';
     if (ex) {
@@ -124,7 +132,6 @@ window.Stats = (function () {
           <div><span>média do mundo</span><b>${ex.mundo.toFixed(1)}</b></div>
         </div><p>${frase}</p><p><small>com base em ${ex.base} filme(s); notas convertidas de ★ para 0–10</small></p>`;
     }
-
     const outros = Object.values(perfis).filter(x => x.id !== p.id);
     const compatHtml = `<ul class="compat">${outros.map(o => {
       const c = compat(p, o);
@@ -134,6 +141,55 @@ window.Stats = (function () {
         <b>${c.pct}%</b><br><small>${c.frase}${c.comuns.length ? ` · em comum: ${c.comuns.slice(0, 3).map(esc).join(', ')}` : ''}</small>
       </li>`;
     }).join('')}</ul>`;
+    return [
+      { id: 'numeros', html: janela('🔢 em números', `<dl class="numeros">
+        <div><dt>filmes e séries</dt><dd>${r.total}</dd></div>
+        <div><dt>horas de filme</dt><dd>${tempo(r.minutos)}</dd></div>
+        <div><dt>nota média</dt><dd class="estrelas-feed" aria-label="nota média ${Math.round(r.mediaNotas * 2) / 2} de 5">${estrelas(Math.round(r.mediaNotas * 2) / 2)}</dd></div>
+        <div><dt>gêneros diferentes</dt><dd>${r.generos.length}</dd></div>
+      </dl>${r.semInfo ? `<p><small>${r.semInfo} título(s) sem informações — guarde pela busca pra entrarem nas contas</small></p>` : ''}`) },
+      { id: 'generos', html: janela('🎭 gêneros favoritos', barrasH(r.generos.slice(0, 7), true)) },
+      { id: 'decadas', html: janela('📅 por década', barrasV(r.decadas)) },
+      { id: 'exigencia', html: janela('🍅 exigente ou pega leve?', exigencia) },
+      { id: 'notas', html: janela('⭐ como ' + voce + ' dá notas', barrasNotas(r.notas)) },
+      { id: 'diretores', html: janela('🎬 diretores mais vistos', r.diretores.length ? `<ol class="lista-top">${r.diretores.map(([d, n]) => `<li>${esc(d)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
+      { id: 'paises', html: janela('🌍 volta ao mundo', r.paises.length ? `<ul class="paises">${r.paises.map(([iso, n]) => `<li><span class="bandeira" aria-hidden="true">${bandeira(iso)}</span> ${esc(nomePais(iso))} <small>(${n})</small></li>`).join('')}</ul>` : '<p class="vazio">sem dados ainda</p>') },
+      { id: 'atores', html: janela('🌟 atores que mais aparecem', r.atores.length ? `<ol class="lista-top">${r.atores.map(([a, n]) => `<li>${esc(a)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
+      { id: 'compat', html: janela(ehEu ? '🤝 compatibilidade com os amigos' : `🤝 compatibilidade de ${esc(p.nome)}`, compatHtml, 'largo') }
+    ];
+  }
+
+  function cartoesDoQuarto(id, lado) {
+    const perfis = Q().perfis();
+    const p = perfis[id];
+    if (!p) return '';
+    const ids = new Set(CARTOES.map(([key]) => key));
+    const ehMeu = p.id === 'eu';
+    const escolhidos = Array.isArray(p.statsCards)
+      ? p.statsCards.filter(key => ids.has(key))
+      : CARTOES.map(([key]) => key).filter(key => ehMeu || key !== 'compat');
+    const itens = criarCartoes(p, perfis)
+      .filter(c => escolhidos.includes(c.id) && (ehMeu || c.id !== 'compat'));
+    const exibidos = lado === true ? itens.slice(0, 2) : lado === false ? itens.slice(2) : itens;
+    return exibidos.length ? `<div class="stats-grade">${exibidos.map(c =>
+      c.html.replace('<section ', `<section data-cartao="stats-${c.id}" `)).join('')}</div>` : '';
+  }
+
+  function opcoesCartoes(escolhidos) {
+    const selecionados = Array.isArray(escolhidos) ? escolhidos : CARTOES.map(([id]) => id);
+    return CARTOES.map(([id, nome]) => `<label class="opcao-cartao"><input type="checkbox" name="statsCards" value="${id}" ${selecionados.includes(id) ? 'checked' : ''}> ${esc(nome)}</label>`).join('');
+  }
+
+  // ---------- página ----------
+  function render(id) {
+    const perfis = Q().perfis();
+    const p = perfis[id] || perfis.eu;
+    const eu = perfis.eu;
+    const ehEu = p.id === 'eu';
+    const r = resumo(p);
+    const topo = r.generos[0];
+    const voce = ehEu ? 'você' : esc(p.nome);
+    const cartoes = criarCartoes(p, perfis);
 
     const raiz = document.getElementById('tela-stats');
     raiz.innerHTML = `
@@ -144,25 +200,14 @@ window.Stats = (function () {
       </div>
       ${topo ? `<div class="manchete">${voce} é <b>${topo.pct}% ${esc(topo.nome)}</b><br><span>${PERSONALIDADE[topo.nome] || 'gosto único 🌈'}</span></div>` : ''}
       <div class="stats-grade">
-        ${janela('🔢 em números', `
-          <dl class="numeros">
-            <div><dt>filmes e séries</dt><dd>${r.total}</dd></div>
-            <div><dt>horas de filme</dt><dd>${tempo(r.minutos)}</dd></div>
-            <div><dt>nota média</dt><dd class="estrelas-feed">${estrelas(Math.round(r.mediaNotas))}</dd></div>
-            <div><dt>gêneros diferentes</dt><dd>${r.generos.length}</dd></div>
-          </dl>
-          ${r.semInfo ? `<p><small>${r.semInfo} título(s) sem informações — guarde pela busca pra entrarem nas contas</small></p>` : ''}`)}
-        ${janela('🎭 gêneros favoritos', barrasH(r.generos.slice(0, 7), true))}
-        ${janela('📅 por década', barrasV(r.decadas))}
-        ${janela('🍅 exigente ou pega leve?', exigencia)}
-        ${janela('⭐ como ' + voce + ' dá notas', barrasH(r.notas.map(x => ({ nome: '★'.repeat(x.n), n: x.qtd })), false))}
-        ${janela('🎬 diretores mais vistos', r.diretores.length ? `<ol class="lista-top">${r.diretores.map(([d, n]) => `<li>${esc(d)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>')}
-        ${janela('🌍 volta ao mundo', r.paises.length ? `<ul class="paises">${r.paises.map(([iso, n]) => `<li><span class="bandeira" aria-hidden="true">${bandeira(iso)}</span> ${esc(nomePais(iso))} <small>(${n})</small></li>`).join('')}</ul>` : '<p class="vazio">sem dados ainda</p>')}
-        ${r.atores.length ? janela('🌟 atores que mais aparecem', `<ol class="lista-top">${r.atores.map(([a, n]) => `<li>${esc(a)} <small>(${n})</small></li>`).join('')}</ol>`) : ''}
-        ${janela(ehEu ? '🤝 compatibilidade com os amigos' : `🤝 compatibilidade de ${esc(p.nome)}`, compatHtml, 'largo')}
+        ${cartoes.map(c => c.html).join('')}
       </div>
       <p class="fonte-dados">${window.Filmes.temChave() ? 'Informações dos filmes: TMDB.' : 'A busca de filmes está desligada.'} <button class="btn98" data-acao="tmdb">⚙️ ${window.Filmes.temChave() ? 'conexão com o TMDB' : 'conectar ao TMDB'}</button></p>`;
   }
 
-  return { render, resumo, compat };
+  return {
+    render, resumo, compat,
+    cartoesDoQuarto,
+    opcoesCartoes: escolhidos => opcoesCartoes(escolhidos)
+  };
 })();

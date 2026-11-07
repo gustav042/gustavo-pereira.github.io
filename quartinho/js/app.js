@@ -7,7 +7,7 @@
   // ================= constantes =================
   const CHAVE = 'quartinho:v2';
   const CHAVE_V1 = 'quartinho:perfil:v1';
-  const CHAVE_VISITAS = 'quartinho:visitas';
+  const CHAVE_VISITAS = 'quartinho:visitasPorQuarto';
   const CHAVE_VOLUME = 'quartinho:volume';
 
   const LARG = 192, ALT = 160, PAREDE = 48, GRADE = 4; // área interna do quarto (px)
@@ -102,6 +102,7 @@
   let perfis = carregar();
   let atualId = 'eu';
   let tela = 'feed'; // 'feed' (início) ou 'quarto'
+  let idVisitaAtiva = null;
   let modoEdicao = false;
   let selecionado = null;
   const perfil = () => perfis[atualId];
@@ -157,7 +158,14 @@
     <pattern id="wp-madeira" width="32" height="64" patternUnits="userSpaceOnUse"><rect width="32" height="64" fill="#a5713f"/><rect width="1" height="64" fill="#b4834f"/><rect x="8" width="1" height="64" fill="#b4834f"/><rect x="16" width="1" height="64" fill="#b4834f"/><rect x="24" width="1" height="64" fill="#b4834f"/><rect x="7" width="1" height="64" fill="#7a5230"/><rect x="15" width="1" height="64" fill="#7a5230"/><rect x="23" width="1" height="64" fill="#7a5230"/><rect x="31" width="1" height="64" fill="#7a5230"/><rect y="40" width="7" height="1" fill="#7a5230"/><rect x="8" y="18" width="7" height="1" fill="#7a5230"/><rect x="16" y="54" width="7" height="1" fill="#7a5230"/><rect x="24" y="6" width="7" height="1" fill="#7a5230"/><rect x="3" y="8" width="1" height="12" fill="#b88a58"/><rect x="11" y="30" width="1" height="10" fill="#b88a58"/><rect x="19" y="6" width="1" height="14" fill="#b88a58"/><rect x="27" y="26" width="1" height="11" fill="#b88a58"/><rect x="5" y="48" width="1" height="8" fill="#8f6034"/><rect x="12" y="2" width="1" height="7" fill="#8f6034"/><rect x="20" y="34" width="1" height="9" fill="#8f6034"/><rect x="28" y="44" width="1" height="8" fill="#8f6034"/></pattern>
     <pattern id="wp-tijolo" width="16" height="8" patternUnits="userSpaceOnUse"><rect width="16" height="8" fill="#b5523b"/><rect y="3" width="16" height="1" fill="#d9a38a"/><rect y="7" width="16" height="1" fill="#d9a38a"/><rect x="7" width="1" height="3" fill="#d9a38a"/><rect x="15" y="4" width="1" height="3" fill="#d9a38a"/><rect x="1" y="0" width="4" height="1" fill="#c96a50"/><rect x="9" y="4" width="4" height="1" fill="#c96a50"/></pattern>
     <pattern id="wp-nuvens" width="32" height="24" patternUnits="userSpaceOnUse"><rect width="32" height="24" fill="#bfe6ff"/><rect x="3" y="5" width="9" height="3" fill="#fff"/><rect x="5" y="3" width="5" height="2" fill="#fff"/><rect x="19" y="16" width="10" height="3" fill="#fff"/><rect x="21" y="14" width="5" height="2" fill="#fff"/><rect x="3" y="8" width="9" height="1" fill="#e2f3ff"/></pattern>
-    <pattern id="fl-madeira" width="32" height="16" patternUnits="userSpaceOnUse"><rect width="32" height="16" fill="#9c6b3c"/><rect y="7" width="32" height="1" fill="#7a5230"/><rect y="15" width="32" height="1" fill="#7a5230"/><rect x="20" width="1" height="7" fill="#7a5230"/><rect x="4" y="8" width="1" height="7" fill="#7a5230"/><rect x="5" y="2" width="8" height="1" fill="#ad7a48"/><rect x="22" y="11" width="6" height="1" fill="#ad7a48"/><rect y="0" width="32" height="1" fill="#a87545"/><rect y="8" width="32" height="1" fill="#a87545"/></pattern>
+    <pattern id="fl-madeira" width="64" height="32" patternUnits="userSpaceOnUse">
+      <rect width="64" height="32" fill="#a67443"/>
+      <rect y="8" width="64" height="7" fill="#9d693a"/><rect y="24" width="64" height="7" fill="#a06c3d"/>
+      <path d="M0 7h64M0 15h64M0 23h64M0 31h64 M20 0v7M52 0v7M4 8v7M36 8v7M12 16v7M44 16v7M28 24v7M60 24v7" fill="none" stroke="#794e2e"/>
+      <path d="M1 0h18m2 0h30m2 0h11M5 8h30m2 0h27M1 16h10m2 0h30m2 0h19M1 24h26m2 0h30" fill="none" stroke="#bd8955"/>
+      <path d="M4 3h7m3 1h3m8 0h12m3-2h6m11 3h4M9 11h8m3 2h7m13-3h10m3 3h6M2 19h6m8 2h8m5-3h10m8 3h10M4 27h9m3 2h7m10-2h10m4 2h8" fill="none" stroke="#b4814f"/>
+      <path d="M30 5h4m-23 9h3m40 8h4M20 30h5" fill="none" stroke="#8c5c35"/>
+    </pattern>
     <pattern id="fl-carpete" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="4" fill="#7b2d3b"/><rect x="1" y="1" width="1" height="1" fill="#8f3a49"/><rect x="3" y="3" width="1" height="1" fill="#6a2433"/></pattern>
     <pattern id="fl-xadrez" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#e8e8e8"/><rect width="8" height="8" fill="#333"/><rect x="8" y="8" width="8" height="8" fill="#333"/></pattern>
     <pattern id="fl-ladrilho" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#e9e4da"/><rect y="15" width="16" height="1" fill="#bdb5a6"/><rect x="15" width="1" height="16" fill="#bdb5a6"/><rect x="1" y="1" width="6" height="1" fill="#f7f4ee"/></pattern>
@@ -190,7 +198,12 @@
     const pos = posArte(it);
     // móvel espelhado (virado pra direita): o brilho também troca de lado
     if (f.brilhos) f.brilhos(ctx, it).forEach(b => brilhos.push({ x: pos.x + (f.espelhar ? f.w - b.x : b.x), y: pos.y + b.y, r: b.r, cor: b.cor }));
-    return `<g ${attrsItem(it, ctx)} transform="translate(${pos.x},${pos.y})">${window.Sprites.arte(it, ctx)}</g>`;
+    const sobraSombra = Math.max(0, Math.min(2, ALT - baseDe(it)));
+    const sombra = f.lugar === 'chao' ? `<g pointer-events="none" fill="#24150f" opacity=".18">
+      <rect x="1" y="${f.h - 2}" width="${f.w - 2}" height="2"/>
+      <rect x="3" y="${f.h}" width="${Math.max(1, f.w - 6)}" height="${sobraSombra}"/>
+    </g>` : '';
+    return `<g ${attrsItem(it, ctx)} transform="translate(${pos.x},${pos.y})">${sombra}${window.Sprites.arte(it, ctx)}</g>`;
   }
 
   // Coisas que se mexem por cima da iluminação: notas do som e luz da TV e do PC.
@@ -307,14 +320,20 @@
       <rect width="${LARG + 16}" height="${ALT + 16}" fill="#3b2219"/>
       <rect x="2" y="2" width="${LARG + 12}" height="${ALT + 12}" fill="#7a4a2e"/>
       <rect x="2" y="2" width="${LARG + 12}" height="1" fill="#a06a44"/>
+      <rect x="2" y="3" width="1" height="${ALT + 10}" fill="#a06a44"/>
+      <rect x="3" y="${ALT + 12}" width="${LARG + 10}" height="1" fill="#4a291b"/>
       <rect x="6" y="6" width="${LARG + 4}" height="${ALT + 4}" fill="#2a170f"/>
       <g id="interior" transform="translate(8,8)">
         <rect width="${LARG}" height="${PAREDE}" fill="url(#wp-${papel})"/>
         <rect width="${LARG}" height="3" fill="rgba(0,0,0,.18)"/>
         <rect y="${PAREDE - 4}" width="${LARG}" height="4" fill="#5a3a22"/>
         <rect y="${PAREDE - 4}" width="${LARG}" height="1" fill="#8a5a33"/>
+        <rect y="${PAREDE - 2}" width="${LARG}" height="1" fill="#704628"/>
         <rect y="${PAREDE}" width="${LARG}" height="${ALT - PAREDE}" fill="url(#fl-${piso})"/>
         <rect y="${PAREDE}" width="${LARG}" height="3" fill="rgba(0,0,0,.2)"/>
+        <rect y="${PAREDE + 3}" width="${LARG}" height="1" fill="rgba(0,0,0,.06)"/>
+        <rect y="${PAREDE}" width="2" height="${ALT - PAREDE}" fill="rgba(0,0,0,.10)"/>
+        <rect x="${LARG - 2}" y="${PAREDE}" width="2" height="${ALT - PAREDE}" fill="rgba(0,0,0,.10)"/>
         <rect y="${ALT - 6}" width="${LARG}" height="6" fill="rgba(0,0,0,.08)"/>
         <g id="camada-parede">${corpoParede}</g>
         ${sol}
@@ -498,6 +517,39 @@
     </svg>`;
   }
 
+  const seguidoresCache = new Map();
+  const seguidoresCarregando = new Set();
+  function htmlSeguidores(p) {
+    if (!p.uid || !Conta.configurado) return '';
+    const dados = seguidoresCache.get(p.uid);
+    const corpo = !dados ? '<p class="vazio">carregando...</p>'
+      : dados.erro ? '<p class="vazio">não foi possível carregar os seguidores</p>'
+        : dados.length ? `<ul class="lista-seguidores">${dados.map(l => {
+          const q = l.quem || {};
+          const img = urlSegura(q.avatar);
+          const avatar = img ? `<img src="${esc(img)}" alt="">` : avatarPadrao({ corDestaque: '#ff66cc' });
+          return `<li><a href="${esc(linkQuarto(q.usuario || ''))}"><span class="mini-avatar">${avatar}</span>
+            <span><b>${esc(q.nome || q.usuario || 'pessoa')}</b><small>@${esc(q.usuario || '')}</small></span></a></li>`;
+        }).join('')}</ul>` : '<p class="vazio">ninguém segue este perfil ainda</p>';
+    return `<div class="caixa" data-cartao="seguidores"><div class="caixa-titulo">👥 seguidores</div>${corpo}</div>`;
+  }
+  async function carregarSeguidoresDoPerfil(p) {
+    if (!p.uid || !Conta.configurado || seguidoresCache.has(p.uid) || seguidoresCarregando.has(p.uid)) return;
+    seguidoresCarregando.add(p.uid);
+    try {
+      seguidoresCache.set(p.uid, await Conta.carregarSeguidores(p.uid));
+    } catch (e) {
+      seguidoresCache.set(p.uid, { erro: true });
+      avisar('Não consegui carregar os seguidores: ' + e.message);
+    } finally {
+      seguidoresCarregando.delete(p.uid);
+      if (perfil().uid === p.uid && tela === 'quarto') {
+        renderLateral();
+        agendarCartoes();
+      }
+    }
+  }
+
   // ----- som ambiente da TV (preferência de quem está vendo, não do dono do quarto) -----
   const CHAVE_SOM_TV = 'quartinho:somTv';
   let somTvPref = false;
@@ -548,12 +600,10 @@
 
   function renderLateral() {
     const p = perfil();
-    const a = p.assistindo || {};
     const img = urlSegura(p.avatar);
-    const prog = window.Filmes.progressoDe(a);
     const amigos = Object.values(perfis).filter(x => x.id !== atualId);
     document.getElementById('lateral').innerHTML = `
-      <div class="caixa">
+      <div class="caixa" data-cartao="perfil">
         <div class="caixa-titulo">perfil</div>
         <div class="avatar">${img ? `<img src="${esc(img)}" alt="Foto de ${esc(p.nome)}">` : avatarPadrao(p)}</div>
         <p class="nome-perfil">${esc(p.nome)}</p>
@@ -561,41 +611,19 @@
         ${p.cidade ? `<p>📍 ${esc(p.cidade)}</p>` : ''}
         ${p.pet && PETS[p.pet.tipo] ? `<p>🐾 mora com: ${esc(p.pet.nome || PETS[p.pet.tipo].nome)}</p>` : ''}
       </div>
-      <div class="caixa">
-        <div class="caixa-titulo">♫ rádio do quarto</div>
-        <div id="radio">${htmlRadio()}</div>
-      </div>
-      <div class="caixa">
-        <div class="caixa-titulo">📺 assistindo agora</div>
-        ${a.titulo
-          ? `<p><b>${esc(a.titulo)}</b><br>${esc(a.detalhe)}</p>${a.comentario ? `<p class="comentario-lateral">💬 “${esc(a.comentario)}”</p>` : ''}<div class="barra98" style="margin:6px 10px 10px"><div style="width:${prog}%"></div></div>`
-          : `<p class="vazio">nada no momento</p>`}
-      </div>
-      <div class="caixa">
-        <div class="caixa-titulo">sobre ${ehMeu() ? 'mim' : esc(p.nome)}</div>
-        <p style="white-space:pre-wrap">${esc(p.sobre)}</p>
-      </div>
-      <div class="caixa">
-        <div class="caixa-titulo">pelo quarto</div>
-        <ul class="menu-quarto">
-          <li><button data-acao="estante">📀 estante de DVDs</button></li>
-          <li><button data-acao="posteres" data-idx="0">🖼️ pôsteres favoritos</button></li>
-          <li><button data-acao="tv">📺 televisão</button></li>
-          <li><button data-acao="computador">💾 computador</button></li>
-          <li><button data-acao="mural">📌 mural de recados</button></li>
-          <li><button data-acao="trofeus">🏆 troféus</button></li>
-          <li><a href="#stats/${p.id}">📊 estatísticas</a></li>
-        </ul>
-      </div>
-      <div class="caixa">
-        <div class="caixa-titulo">${ehMeu() ? '👥 meus amigos' : '👥 outros quartos'}</div>
+      ${ehMeu() ? `<div class="caixa" data-cartao="amigos">
+        <div class="caixa-titulo">👥 meus amigos</div>
         <ul class="lista-amigos">${amigos.map(x => `
           <li><button data-visitar="${x.id}">
             <span class="mini-avatar" style="background:${corValida(x.corDestaque, '#ff66cc')}"></span>
             <span><b>${x.id === 'eu' ? '🏠 meu quarto' : esc(x.nome)}</b><small>${x.assistindo && x.assistindo.titulo ? 'vendo ' + esc(x.assistindo.titulo) : ''}</small></span>
           </button></li>`).join('')}</ul>
-      </div>
+      </div>${htmlSeguidores(p)}` : htmlSeguidores(p)}
       ${ehMeu() ? `
+        <div class="controles-cartoes">
+          <button class="btn98 btn-lateral" data-cartoes-restaurar>↺ Restaurar posições dos cartões</button>
+          <small>Arraste os cartões para organizá-los.</small>
+        </div>
         <button class="btn98 btn-lateral" data-acao="arrumar">🪑 Arrumar móveis</button>
         <button class="btn98 btn-lateral" data-acao="decorar">🖌️ Decorar e mudar a vibe</button>
         <button class="btn98 btn-lateral" data-acao="blog">🎨 Personalizar meu blog</button>`
@@ -608,6 +636,17 @@
     document.title = `${p.nome} · quartinho.net`;
     renderQuarto();
     renderLateral();
+    carregarSeguidoresDoPerfil(p);
+    contarVisitaQuarto(p);
+    const statsLateral = document.getElementById('stats-lateral');
+    const statsQuarto = document.getElementById('stats-quarto');
+    document.getElementById('tela-quarto').classList.toggle('visitando-layout', !ehMeu());
+    document.getElementById('tela-quarto').classList.toggle('meu-quartinho-layout', ehMeu());
+    document.getElementById('tela-quarto').classList.toggle('cartoes-moveis', ehMeu());
+    statsLateral.hidden = ehMeu();
+    statsQuarto.hidden = false;
+    statsLateral.innerHTML = ehMeu() ? '' : window.Stats.cartoesDoQuarto(atualId, true);
+    statsQuarto.innerHTML = window.Stats.cartoesDoQuarto(atualId, ehMeu() ? undefined : false);
     const a = p.assistindo || {};
     const letreiroProprio = window.Blog.letreiroDe(p);
     document.getElementById('letreiro-texto').textContent = letreiroProprio ? `~*~ ${letreiroProprio} ~*~` :
@@ -617,9 +656,145 @@
     atualizarSomTV();
     const aviso = document.getElementById('visitando');
     aviso.hidden = ehMeu();
-    aviso.innerHTML = ehMeu() ? '' : `🚪 você está visitando o quartinho de <b>${esc(p.nome)}</b>${p.usuario ? ` <small>@${esc(p.usuario)}</small>` : ''} ${btnSeguir(p)}`;
+    aviso.innerHTML = ehMeu() ? '' : `🚪 você está visitando o quartinho de <b>${esc(p.nome)}</b>${p.usuario ? ` <small>@${esc(p.usuario)}</small>` : ''} <a class="btn98" href="#stats/${esc(p.id)}">📊 estatísticas</a> ${btnSeguir(p)}`;
     if (tela === 'quarto') window.Blog.aplicar(p);
+    agendarCartoes();
   }
+
+  // As posições são relativas à largura do conteúdo, para acompanhar telas desktop diferentes.
+  let arrasteCartao = null;
+  let frameCartoes = 0;
+  const cartoesObservados = new Set();
+  const observarCartoes = new ResizeObserver(() => {
+    if (!arrasteCartao && tela === 'quarto') agendarCartoes();
+  });
+  const desktopCartoes = () => matchMedia('(min-width: 821px)').matches;
+  const raizCartoes = () => document.getElementById('tela-quarto');
+  const elementosCartoes = () => [...raizCartoes().querySelectorAll('[data-cartao]')];
+
+  function agendarCartoes() {
+    cancelAnimationFrame(frameCartoes);
+    frameCartoes = requestAnimationFrame(prepararCartoes);
+  }
+
+  function prepararCartoes() {
+    const raiz = raizCartoes();
+    const cartoes = elementosCartoes();
+    cartoesObservados.forEach(c => {
+      if (!cartoes.includes(c)) { observarCartoes.unobserve(c); cartoesObservados.delete(c); }
+    });
+    cartoes.forEach(c => {
+      if (!cartoesObservados.has(c)) { observarCartoes.observe(c); cartoesObservados.add(c); }
+    });
+    raiz.style.paddingBottom = '';
+    cartoes.forEach(c => {
+      c.style.transform = '';
+      c.style.width = '';
+      if (!ehMeu() || !desktopCartoes()) c.querySelectorAll('.alca-cartao').forEach(a => a.remove());
+    });
+    if (tela !== 'quarto' || !desktopCartoes()) return;
+
+    const largura = raiz.getBoundingClientRect().width;
+    if (!largura) return;
+    const posicoes = arrasteCartao ? arrasteCartao.posicoes : (perfil().posicoesCartoes || {});
+    cartoes.forEach(c => {
+      const pos = posicoes[c.dataset.cartao];
+      if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y) && Number.isFinite(pos.w) && pos.w > 0) {
+        c.style.width = Math.min(1, pos.w) * largura + 'px';
+      }
+    });
+    const base = raiz.getBoundingClientRect();
+    const fundoOriginal = base.bottom;
+    let fundo = fundoOriginal;
+    cartoes.forEach(c => {
+      const pos = posicoes[c.dataset.cartao];
+      if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y) && Number.isFinite(pos.w) && pos.w > 0) {
+        const caixa = c.getBoundingClientRect();
+        const x = Math.max(0, Math.min(pos.x * largura, largura - caixa.width));
+        const y = Math.max(0, Math.min(pos.y * largura, largura * 30));
+        c.style.transform = `translate(${x - (caixa.left - base.left)}px, ${y - (caixa.top - base.top)}px)`;
+        fundo = Math.max(fundo, base.top + y + caixa.height);
+      }
+      if (ehMeu()) {
+        const titulo = c.querySelector('.caixa-titulo, .titulo-caixa');
+        if (titulo && !titulo.querySelector('.alca-cartao')) {
+          const alca = document.createElement('button');
+          alca.type = 'button';
+          alca.className = 'alca-cartao';
+          alca.setAttribute('aria-label', `Mover cartão ${titulo.textContent.trim()}`);
+          alca.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown ArrowLeft ArrowRight');
+          alca.title = 'Arraste ou use as setas do teclado';
+          alca.textContent = '✥';
+          titulo.appendChild(alca);
+        }
+      }
+    });
+    if (fundo > fundoOriginal) raiz.style.paddingBottom = Math.ceil(fundo - fundoOriginal + 16) + 'px';
+  }
+
+  function posicaoAtualCartao(cartao) {
+    const raiz = raizCartoes().getBoundingClientRect();
+    const caixa = cartao.getBoundingClientRect();
+    return { x: (caixa.left - raiz.left) / raiz.width, y: (caixa.top - raiz.top) / raiz.width, w: caixa.width / raiz.width };
+  }
+
+  function salvarPosicoesCartoes(posicoes) {
+    const anteriores = perfis.eu.posicoesCartoes;
+    perfis.eu.posicoesCartoes = posicoes;
+    if (!salvar()) {
+      perfis.eu.posicoesCartoes = anteriores;
+      avisar('Não consegui salvar a organização dos cartões.');
+    }
+    agendarCartoes();
+  }
+
+  document.addEventListener('pointerdown', e => {
+    const cartao = e.target.closest('#tela-quarto [data-cartao]');
+    const alca = e.target.closest('.alca-cartao');
+    if (!cartao || !ehMeu() || tela !== 'quarto' || !desktopCartoes() || e.button !== 0 ||
+        (!alca && e.target.closest('a, button, input, select, textarea, label'))) return;
+    const inicio = posicaoAtualCartao(cartao);
+    arrasteCartao = { id: cartao.dataset.cartao, inicio, x: e.clientX, y: e.clientY,
+      scrollY: window.scrollY, ponteiro: e.pointerId, mexeu: false, posicoes: Object.assign({}, perfil().posicoesCartoes || {}) };
+    cartao.setPointerCapture(e.pointerId);
+    if (alca) alca.focus();
+    e.preventDefault();
+  });
+  document.addEventListener('pointermove', e => {
+    if (!arrasteCartao || e.pointerId !== arrasteCartao.ponteiro) return;
+    if (!arrasteCartao.mexeu && Math.hypot(e.clientX - arrasteCartao.x, e.clientY - arrasteCartao.y) < 5) return;
+    arrasteCartao.mexeu = true;
+    const largura = raizCartoes().getBoundingClientRect().width;
+    if (e.clientY > innerHeight - 40) window.scrollBy(0, 15);
+    else if (e.clientY < 40) window.scrollBy(0, -15);
+    const a = arrasteCartao;
+    a.posicoes[a.id] = {
+      x: Math.max(0, Math.min(1 - a.inicio.w, a.inicio.x + (e.clientX - a.x) / largura)),
+      y: Math.max(0, Math.min(30, a.inicio.y + (e.clientY - a.y + window.scrollY - a.scrollY) / largura)),
+      w: a.inicio.w
+    };
+    // Não recria a alça enquanto ela captura o ponteiro.
+    const cartao = elementosCartoes().find(c => c.dataset.cartao === a.id);
+    if (cartao) {
+      const atual = posicaoAtualCartao(cartao);
+      const transform = new DOMMatrixReadOnly(getComputedStyle(cartao).transform);
+      cartao.style.transform = `translate(${transform.m41 + (a.posicoes[a.id].x - atual.x) * largura}px, ${transform.m42 + (a.posicoes[a.id].y - atual.y) * largura}px)`;
+    }
+  });
+  function terminarArrasteCartao(e, cancelar) {
+    if (!arrasteCartao || e.pointerId !== arrasteCartao.ponteiro) return;
+    const posicoes = arrasteCartao.posicoes;
+    const mexeu = arrasteCartao.mexeu;
+    arrasteCartao = null;
+    if (cancelar) agendarCartoes(); else if (mexeu) salvarPosicoesCartoes(posicoes);
+  }
+  document.addEventListener('pointerup', e => terminarArrasteCartao(e, false));
+  document.addEventListener('pointercancel', e => terminarArrasteCartao(e, true));
+  document.addEventListener('lostpointercapture', e => terminarArrasteCartao(e, true));
+  window.addEventListener('resize', () => {
+    if (arrasteCartao) arrasteCartao = null;
+    agendarCartoes();
+  });
 
   function mudou() { salvar(); renderTudo(); atualizarArrumar(); }
 
@@ -649,15 +824,43 @@
     renderQuarto(); // atualiza a luzinha do aparelho de som
   });
 
-  function contarVisita() {
-    let n = 1337;
+  function mostrarContagemVisitas(n) {
+    const texto = typeof n === 'number' ? String(n).padStart(6, '0') : String(n);
+    document.getElementById('contador').textContent = texto;
+  }
+  function contarVisitaQuarto(p) {
+    if (Conta.configurado && estadoConta === 'carregando' && !p.uid) {
+      mostrarContagemVisitas('------');
+      return;
+    }
+    if (idVisitaAtiva === p.id) return;
+    idVisitaAtiva = p.id;
+    if (Conta.configurado && p.uid && Conta.logado()) {
+      mostrarContagemVisitas('------');
+      Conta.registrarVisita(p.uid).then(n => {
+        if (idVisitaAtiva === p.id) mostrarContagemVisitas(n);
+      }).catch(e => {
+        if (idVisitaAtiva === p.id) mostrarContagemVisitas('ERRO');
+        avisar('Não consegui registrar a visita: ' + e.message);
+      });
+      return;
+    }
+    let visitas = {};
     try {
-      n = (parseInt(localStorage.getItem(CHAVE_VISITAS), 10) || 1337) + 1;
-      localStorage.setItem(CHAVE_VISITAS, String(n));
+      visitas = JSON.parse(localStorage.getItem(CHAVE_VISITAS) || '{}') || {};
+      visitas[p.id] = (Number(visitas[p.id]) || 0) + 1;
+      localStorage.setItem(CHAVE_VISITAS, JSON.stringify(visitas));
+      mostrarContagemVisitas(visitas[p.id]);
+    } catch (e) {
+      mostrarContagemVisitas(Number(visitas[p.id]) || 0);
+      avisar('Não consegui salvar a contagem local de visitas.');
+    }
+  }
+  function carregarVolume() {
+    try {
       const v = parseFloat(localStorage.getItem(CHAVE_VOLUME));
       if (!isNaN(v)) window.Musica.definirVolume(v);
     } catch (e) { /* ignora */ }
-    document.getElementById('contador').textContent = String(n).padStart(6, '0');
   }
 
   // ================= arrumar móveis (modo edição) =================
@@ -823,7 +1026,7 @@
               <div class="linha">
                 ${campo('Título (digite pra buscar)', 'titulo', '', 'text', 'required maxlength="80" placeholder="ex.: matrix"')}
                 <span class="curto">${campo('Ano', 'ano', '', 'number', 'min="1888" max="2100"')}</span>
-                <label class="campo curto"><span>Nota</span><select name="nota">${[5, 4, 3, 2, 1].map(n => `<option value="${n}">${'★'.repeat(n)}</option>`).join('')}</select></label>
+                <label class="campo"><span>Nota</span>${window.U.campoNota(3)}</label>
               </div>
               <label class="campo"><span>O que achou? (opcional)</span><textarea name="comentario" maxlength="280" rows="2" placeholder="ex.: chorei no final, recomendo demais"></textarea></label>
               <button class="btn98" type="submit">Guardar</button>
@@ -834,6 +1037,7 @@
         let escolhido = null; // filme escolhido na busca (com ano, gêneros etc.)
         const form = corpo.querySelector('#f-filme');
         if (form) {
+          window.U.prepararNotas(form);
           window.Busca.anexar(form.elements.titulo, {
             aoEscolher(det) {
               escolhido = det;
@@ -886,7 +1090,7 @@
       html() {
         const a = perfil().assistindo || {};
         const prog = window.Filmes.progressoDe(a);
-        return a.titulo ? `
+        const tela = a.titulo ? `
           <div class="tela-crt">
             <div class="canal">CANAL 03 ▸ AO VIVO</div>
             <h3>${esc(a.titulo)}</h3>
@@ -895,8 +1099,43 @@
           ${a.comentario ? `<p class="comentario-tv">💬 “${esc(a.comentario)}”</p>` : ''}
           <p>Progresso: ${prog}%</p>
           <div class="barra98"><div style="width:${prog}%"></div></div>
-          <p>${htmlSomTV()}</p>`
-          : `<div class="tela-crt"><div class="canal">CANAL 03</div><h3>sem sinal...</h3></div>`;
+          <p>${htmlSomTV()}</p>` : `<div class="tela-crt"><div class="canal">CANAL 03</div><h3>sem sinal...</h3></div>`;
+        const editor = ehMeu() ? `<form class="form98" data-form-tv>
+            <fieldset><legend>✏️ Mudar o que estou assistindo</legend>
+              <label class="campo"><span>Título (digite pra buscar)</span><input type="text" name="titulo" maxlength="60" required value="${esc(a.titulo || '')}" placeholder="ex.: lost"></label>
+              <label class="campo"><span>Episódio/detalhe</span><input type="text" name="detalhe" maxlength="60" value="${esc(a.detalhe || '')}" placeholder="ex.: T1 · E06"></label>
+              <label class="campo"><span>Comentário (opcional)</span><textarea name="comentario" maxlength="280" rows="2">${esc(a.comentario || '')}</textarea></label>
+              <button class="btn98" type="submit">Salvar o que estou assistindo</button>
+            </fieldset>
+          </form>` : '';
+        return tela + editor;
+      },
+      bind(corpo, redesenhar) {
+        const form = corpo.querySelector('[data-form-tv]');
+        if (!form) return;
+        let escolhido = null;
+        window.Busca.anexar(form.elements.titulo, { aoEscolher(det) { escolhido = det; } });
+        form.onsubmit = e => {
+          e.preventDefault();
+          const titulo = form.elements.titulo.value.trim();
+          if (!titulo) return;
+          const anterior = perfil().assistindo || {};
+          const meta = escolhido && escolhido.titulo === titulo && escolhido.meta
+            ? escolhido.meta : (anterior.titulo === titulo ? anterior.meta : null);
+          const novo = {
+            titulo,
+            detalhe: form.elements.detalhe.value.trim(),
+            progresso: anterior.titulo === titulo ? window.Filmes.progressoDe(anterior) : 0
+          };
+          const comentario = form.elements.comentario.value.trim().slice(0, 280);
+          if (comentario) novo.comentario = comentario;
+          if (meta) novo.meta = meta;
+          const auto = window.Filmes.progressoCalculado(novo);
+          if (auto !== null) novo.progresso = auto;
+          perfil().assistindo = novo;
+          mudou();
+          redesenhar();
+        };
       }
     },
 
@@ -985,6 +1224,7 @@
               .catch(err => avisar('⚠ ' + err.message));
             return;
           }
+          idVisitaAtiva = null;
           perfil().recados.unshift({ de: String(fd.get('de')).trim(), texto, data: hoje(), quando: new Date().toISOString() });
           mudou(); redesenhar();
         };
@@ -1209,6 +1449,10 @@
                 <input type="range" name="tv_progresso" min="0" max="100" value="${window.Filmes.progressoDe(a)}" ${auto !== null ? 'disabled' : ''}></label>`;
             })()}
           </fieldset>
+          <fieldset><legend>📊 Cartões de estatística do meu quartinho</legend>
+            <p>Escolha quais cartões aparecem no seu quarto e quando alguém visita:</p>
+            <div class="opcoes-cartoes">${window.Stats.opcoesCartoes(p.statsCards)}</div>
+          </fieldset>
           <div class="linha">
             <button class="btn98" type="button" data-restaurar>Restaurar padrão</button>
             <span class="msg" role="status"></span>
@@ -1361,6 +1605,7 @@
     const tipoPet = PETS[s('pet_tipo')] ? s('pet_tipo') : 'nenhum';
     if (!p.pet || p.pet.tipo !== tipoPet) Pet.estado = null;
     p.pet = { tipo: tipoPet, cor: s('pet_cor'), nome: s('pet_nome') };
+    p.statsCards = fd.getAll('statsCards');
     p.posteres = p.posteres.map((_, i) => ({
       titulo: s(`p${i}_titulo`),
       ano: Number(s(`p${i}_ano`)) || '',
@@ -1424,6 +1669,10 @@
 
   // ================= eventos globais =================
   document.addEventListener('click', e => {
+    if (e.target.closest('[data-cartoes-restaurar]') && ehMeu() && desktopCartoes()) {
+      salvarPosicoesCartoes({});
+      return;
+    }
     if (e.target.closest('#pet') && !modoEdicao) { carinho(); return; }
     const visita = e.target.closest('[data-visitar]');
     if (visita) { location.hash = linkQuarto(visita.dataset.visitar); return; }
@@ -1448,6 +1697,21 @@
   });
 
   document.addEventListener('keydown', e => {
+    const alca = e.target.closest('.alca-cartao');
+    const passosCartao = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] };
+    if (alca && passosCartao[e.key] && ehMeu() && desktopCartoes()) {
+      e.preventDefault();
+      const cartao = alca.closest('[data-cartao]');
+      const largura = raizCartoes().getBoundingClientRect().width;
+      const pos = posicaoAtualCartao(cartao);
+      const passo = passosCartao[e.key];
+      pos.x = Math.max(0, Math.min(1 - pos.w, pos.x + passo[0] / largura));
+      pos.y = Math.max(0, Math.min(30, pos.y + passo[1] / largura));
+      const posicoes = Object.assign({}, perfil().posicoesCartoes || {});
+      posicoes[cartao.dataset.cartao] = pos;
+      salvarPosicoesCartoes(posicoes);
+      return;
+    }
     const digitando = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
     if (modoEdicao && selecionado && !digitando) {
       const passos = { ArrowLeft: [-GRADE, 0], ArrowRight: [GRADE, 0], ArrowUp: [0, -GRADE], ArrowDown: [0, GRADE] };
@@ -1544,6 +1808,9 @@
   // Com conta: "eu" é o meu perfil do banco e os outros são quem eu sigo (a chave no mapa é o @usuario).
   const Conta = window.Conta;
   let seguindo = new Set();
+  let sugestoesPessoas = [];
+  let sugestoesCarregando = false;
+  let erroSugestoes = '';
   let estadoConta = Conta.configurado ? 'carregando' : 'demo'; // demo | carregando | fora | dentro
 
   function perfilNovo(nome) {
@@ -1624,6 +1891,10 @@
 
   async function recarregarRede() {
     if (!Conta.logado()) {
+      idVisitaAtiva = null;
+      sugestoesPessoas = [];
+      sugestoesCarregando = false;
+      erroSugestoes = '';
       estadoConta = Conta.configurado ? 'fora' : 'demo';
       perfis = carregar();
       seguindo = new Set();
@@ -1633,6 +1904,7 @@
       atualizarBotaoConta(); atualizarSino(); rota();
       return;
     }
+    idVisitaAtiva = null;
     estadoConta = 'carregando'; atualizarBotaoConta();
     try {
       let rede = await Conta.carregarRede();
@@ -1663,6 +1935,28 @@
     atualizarBotaoConta();
     document.querySelectorAll('.janela').forEach(j => { const id = j.id.replace('jan-', ''); if (JANELAS[id] && JANELAS[id]._redesenhar && j.isConnected) JANELAS[id]._redesenhar(); });
     rota();
+    atualizarSugestoesPessoas();
+  }
+
+  async function atualizarSugestoesPessoas() {
+    if (!Conta.logado()) {
+      sugestoesPessoas = [];
+      erroSugestoes = '';
+      sugestoesCarregando = false;
+      return;
+    }
+    sugestoesCarregando = true;
+    erroSugestoes = '';
+    if (tela === 'feed') window.Feed.render();
+    try {
+      sugestoesPessoas = await Conta.sugestoes([...seguindo], 8);
+    } catch (e) {
+      erroSugestoes = e.message;
+      avisar('Não consegui carregar pessoas para seguir: ' + e.message);
+    } finally {
+      sugestoesCarregando = false;
+      if (tela === 'feed') window.Feed.render();
+    }
   }
 
   async function criarPerfilInicial(nomeUsuario, levarLocal) {
@@ -1693,6 +1987,8 @@
       else { await Conta.seguir(id); seguindo.add(id); if (p) p.soVisita = false; }
     } catch (e) { avisar('⚠ ' + e.message); return; }
     if (tela === 'quarto') renderTudo();
+    if (tela === 'feed') window.Feed.render();
+    atualizarSugestoesPessoas();
     redesenharJanelasConta();
   }
   function redesenharJanelasConta() {
@@ -1701,10 +1997,14 @@
 
   // ================= comentários nos posts do feed =================
   // Cada filme da estante é um "post". Filmes novos têm id; os antigos usam título + data.
-  const postDe = f => f.id || `${f.titulo}|${f.data}`;
+  const postDe = f => f.id || f.postKey || `${f.titulo}|${f.data}`;
   let comentarios = [];        // todos os comentários dos posts meus e de quem eu sigo
   let comentariosOk = true;    // false quando a tabela ainda não existe no Supabase
-  const comentarioDaLinha = c => ({ id: c.id, dono: c.dono, post: c.post, deUid: c.de, de: (c.autor && c.autor.usuario) || '?', texto: c.texto, quando: c.criado_em });
+  const comentarioDaLinha = c => ({
+    id: c.id, dono: c.dono, post: c.post, deUid: c.de,
+    de: (c.autor && c.autor.usuario) || '?', avatar: (c.autor && c.autor.avatar) || '',
+    texto: c.texto, quando: c.criado_em
+  });
   async function recarregarComentarios() {
     if (estadoConta !== 'dentro') return;
     const donos = Object.values(perfis).filter(p => p.uid && !p.soVisita).map(p => p.uid);
@@ -1937,6 +2237,11 @@
   // O que o feed pode usar daqui.
   window.Quartinho = {
     perfis: () => perfis,
+    pessoasParaSeguir: () => sugestoesPessoas,
+    seguindoIds: () => seguindo,
+    contaLogada: () => estadoConta === 'dentro',
+    sugestoesCarregando: () => sugestoesCarregando,
+    erroSugestoes: () => erroSugestoes,
     salvar,
     avatar: p => urlSegura(p.avatar) ? `<img src="${esc(urlSegura(p.avatar))}" alt="">` : avatarPadrao(p),
     linkQuarto,
@@ -1951,6 +2256,11 @@
         const linha = await Conta.enviarComentario(p.uid, postDe(f), texto);
         comentarios.push(comentarioDaLinha(linha));
       },
+      async editar(id, texto) {
+        const linha = await Conta.editarComentario(id, texto);
+        const indice = comentarios.findIndex(c => String(c.id) === String(id));
+        if (indice >= 0) comentarios[indice] = comentarioDaLinha(linha);
+      },
       async apagar(id) {
         await Conta.apagarComentario(id);
         comentarios = comentarios.filter(c => c.id !== Number(id) && String(c.id) !== String(id));
@@ -1958,7 +2268,7 @@
     }
   };
 
-  contarVisita();
+  carregarVolume();
   atualizarRodapeTmdb();
   rota();
   iniciarConta();

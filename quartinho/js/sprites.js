@@ -113,8 +113,14 @@ window.Sprites = (function () {
   // Travesseiros + cobertor da cama em pé (colchão de y=13 a 47).
   const roupaV = c => R(2, 14, 13, 9, '#cfc8bd') + R(3, 14, 11, 8, '#ffffff') + R(3, 21, 11, 1, '#e6e0d6')
     + R(17, 14, 13, 9, '#cfc8bd') + R(18, 14, 11, 8, '#ffffff') + R(18, 21, 11, 1, '#e6e0d6')
+    + R(4, 15, 8, 1, '#f4f1eb') + R(19, 15, 8, 1, '#f4f1eb')
+    + R(4, 19, 2, 1, '#e6e0d6') + R(11, 20, 2, 1, '#e6e0d6')
+    + R(19, 19, 2, 1, '#e6e0d6') + R(26, 20, 2, 1, '#e6e0d6')
     + R(1, 25, 30, 22, c.f) + R(1, 25, 30, 4, c.t) + R(1, 29, 30, 1, c.s)
-    + R(1, 25, 2, 22, c.s) + R(29, 25, 2, 22, c.s) + R(6, 35, 8, 1, c.t) + R(18, 41, 8, 1, c.t);
+    + R(1, 25, 2, 22, c.s) + R(29, 25, 2, 22, c.s)
+    + R(4, 26, 24, 1, 'rgba(255,255,255,.25)') + R(3, 43, 26, 1, c.s)
+    + R(6, 34, 8, 1, c.t) + R(7, 35, 5, 1, c.t) + R(18, 40, 8, 1, c.t) + R(20, 41, 5, 1, c.t)
+    + R(4, 31, 1, 2, 'rgba(255,255,255,.22)') + R(27, 38, 1, 2, 'rgba(0,0,0,.12)');
 
   function camaV(estilo, c) {
     const m = MADEIRAS.madeira, F = FERRO;
@@ -141,6 +147,8 @@ window.Sprites = (function () {
   const roupaH = c => R(7, 9, 37, 19, LENCOL)
     + R(8, 10, 8, 16, '#cfc8bd') + R(9, 10, 7, 15, '#ffffff') + R(15, 10, 1, 15, '#e6e0d6')
     + R(18, 9, 26, 19, c.f) + R(18, 9, 3, 19, c.t) + R(21, 9, 1, 19, c.s) + R(26, 14, 6, 1, c.t) + R(34, 20, 6, 1, c.t)
+    + R(19, 10, 1, 16, 'rgba(255,255,255,.22)') + R(40, 10, 1, 17, c.s)
+    + R(27, 15, 4, 1, c.t) + R(35, 21, 4, 1, c.t) + R(10, 12, 4, 1, '#f4f1eb')
     + R(7, 28, 11, 3, '#d9d2c4') + R(18, 28, 26, 4, c.s) + R(18, 28, 26, 1, c.f);
 
   function camaH(estilo, c) {
@@ -172,7 +180,9 @@ window.Sprites = (function () {
   }
   function tapeteRedondo(c) {
     return disco(16, 16, 16, c.s) + disco(16, 16, 15, c.f) + disco(16, 16, 12, c.t) + disco(16, 16, 9, c.f)
-      + disco(16, 16, 5, c.t) + disco(16, 16, 2, c.s);
+      + disco(16, 16, 5, c.t) + disco(16, 16, 2, c.s)
+      + R(9, 4, 6, 1, 'rgba(255,255,255,.22)') + R(4, 12, 1, 5, 'rgba(255,255,255,.18)')
+      + R(21, 26, 4, 1, 'rgba(0,0,0,.14)') + R(27, 15, 1, 5, 'rgba(0,0,0,.14)');
   }
   function passadeira(w, h, c) {
     const deitada = w > h;
@@ -356,11 +366,13 @@ window.Sprites = (function () {
   }
 
   // ---------- plantas ----------
-  const vaso = v => R(2, 16, 12, 3, O) + R(3, 19, 10, 7, O) + R(3, 17, 10, 1, v.t) + R(4, 19, 8, 6, v.f) + R(10, 19, 2, 6, v.s);
+  const vaso = v => R(2, 16, 12, 3, O) + R(3, 19, 10, 7, O) + R(3, 17, 10, 1, v.t) + R(4, 19, 8, 6, v.f) + R(10, 19, 2, 6, v.s)
+    + R(4, 20, 1, 4, v.t) + R(5, 24, 5, 1, 'rgba(0,0,0,.12)');
 
   // ---------- criados e armários ----------
   const criadoBase = (p, dy) => R(0, dy, 16, 18, p.o) + R(1, dy + 1, 14, 5, p.t) + R(1, dy + 1, 14, 1, p.h)
     + R(1, dy + 6, 14, 11, p.f) + R(1, dy + 11, 14, 1, p.s) + R(1, dy + 16, 14, 1, p.s)
+    + R(2, dy + 7, 12, 1, p.t) + R(2, dy + 12, 12, 1, p.t) + R(2, dy + 9, 1, 1, p.s) + R(13, dy + 14, 1, 1, p.s)
     + R(7, dy + 8, 2, 1, p.o) + R(7, dy + 13, 2, 1, p.o)
     + R(1, dy + 18, 2, 2, p.o) + R(13, dy + 18, 2, 2, p.o);
 
@@ -406,7 +418,8 @@ window.Sprites = (function () {
         const fundos = [13, 22, 31, 40];
         ctx.dvds.slice(0, 48).forEach((d, i) => {
           const x = 4 + (i % 12) * 2, yb = fundos[Math.floor(i / 12)];
-          s += R(x, yb - d.h, 2, d.h, d.cor) + R(x + 1, yb - d.h, 1, d.h, 'rgba(0,0,0,.25)');
+          s += R(x, yb - d.h, 2, d.h, d.cor) + R(x + 1, yb - d.h, 1, d.h, 'rgba(0,0,0,.25)')
+            + R(x, yb - d.h + 1, 1, 1, 'rgba(255,255,255,.55)') + R(x, yb - 2, 1, 1, 'rgba(255,255,255,.3)');
         });
         for (const y of [13, 22, 31]) s += R(3, y, 26, 2, p.f) + R(3, y, 26, 1, p.t);
         return s + R(3, 40, 26, 1, p.s) + R(1, 42, 3, 2, p.o) + R(28, 42, 3, 2, p.o);
@@ -656,12 +669,14 @@ window.Sprites = (function () {
       desenhar(c, ctx) {
         const ceu = CEU[ctx.luz] || CEU.dia;
         let vista = '';
-        if (ctx.luz === 'dia') vista = R(5, 7, 5, 2, '#fff') + R(6, 6, 3, 1, '#fff') + R(22, 6, 3, 3, '#fff6a0') + R(19, 15, 6, 2, '#fff');
+        if (ctx.luz === 'dia') vista = R(5, 7, 5, 2, '#fff') + R(6, 6, 3, 1, '#fff') + R(22, 6, 3, 3, '#fff6a0') + R(19, 15, 6, 2, '#fff')
+          + R(3, 21, 12, 2, '#8abf8b') + R(17, 21, 12, 2, '#8abf8b') + R(6, 20, 4, 1, '#b7dca3') + R(22, 20, 4, 1, '#b7dca3');
         else if (ctx.luz === 'tarde') vista = R(20, 13, 4, 4, '#ffde7a') + R(5, 10, 6, 1, '#ffd0a0') + R(3, 18, 12, 4, '#c96b3c') + R(17, 18, 12, 4, '#c96b3c');
         else vista = R(21, 6, 4, 4, '#f5f3c4') + R(21, 6, 1, 1, ceu) + R(6, 7, 1, 1, '#fff') + R(10, 14, 1, 1, '#fff') + R(25, 17, 1, 1, '#fff') + R(19, 12, 1, 1, '#cfd8ff');
         return R(0, 0, 32, 26, O) + R(1, 1, 30, 24, '#f4f1ea') + R(3, 3, 12, 20, ceu) + R(17, 3, 12, 20, ceu)
           + vista + R(3, 3, 12, 1, 'rgba(0,0,0,.15)') + R(17, 3, 12, 1, 'rgba(0,0,0,.15)')
-          + R(5, 15, 1, 3, 'rgba(255,255,255,.5)') + R(19, 15, 1, 3, 'rgba(255,255,255,.4)')
+          + R(5, 11, 1, 6, 'rgba(255,255,255,.4)') + R(6, 10, 2, 1, 'rgba(255,255,255,.4)')
+          + R(19, 12, 1, 5, 'rgba(255,255,255,.35)') + R(20, 11, 2, 1, 'rgba(255,255,255,.35)')
           + R(-1, 24, 34, 4, O) + R(0, 24, 32, 3, '#e0dbd2') + R(0, 24, 32, 1, '#fff')
           + cortinasAoVento(c)
           + R(-2, 0, 36, 1, '#5a3a22');

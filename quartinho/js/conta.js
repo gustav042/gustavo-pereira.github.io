@@ -121,6 +121,25 @@ window.Conta = (function () {
     if (!linha) return null;
     return { linha, recados: await recadosDe([linha.id]) };
   }
+  async function carregarSeguidores(idPerfil) {
+    return checar(await sb.from('seguindo')
+      .select('seguidor, quem:perfis!seguindo_seguidor_fkey(usuario, nome:dados->>nome, avatar:dados->>avatar)')
+      .eq('seguido', idPerfil)
+      .order('criado_em', { ascending: false })
+      .limit(200));
+  }
+  async function sugestoes(seguindoIds, limite) {
+    let consulta = sb.from('perfis')
+      .select('id, usuario, nome:dados->>nome, humor:dados->>humor, avatar:dados->>avatar')
+      .neq('id', uid())
+      .order('criado_em', { ascending: false })
+      .limit(limite || 6);
+    if (seguindoIds.length) consulta = consulta.not('id', 'in', `(${seguindoIds.join(',')})`);
+    return checar(await consulta);
+  }
+  async function registrarVisita(idPerfil) {
+    return Number(checar(await sb.rpc('registrar_visita_quarto', { p_perfil: idPerfil })));
+  }
   async function buscarPessoas(texto) {
     const t = String(texto || '').toLowerCase().replace(/[^a-z0-9_.]/g, '');
     if (t.length < 2) return [];
@@ -150,7 +169,7 @@ window.Conta = (function () {
 
   // ---------- comentários nos posts do feed ----------
   // Se a tabela ainda não existe (falta rodar supabase/comentarios.sql), devolve null em vez de quebrar.
-  const SEL_COMENT = 'id, dono, post, de, texto, criado_em, autor:perfis!comentarios_de_fkey(usuario)';
+  const SEL_COMENT = 'id, dono, post, de, texto, criado_em, autor:perfis!comentarios_de_fkey(usuario, avatar:dados->>avatar)';
   async function comentariosDe(donos) {
     if (!donos.length) return [];
     const { data, error } = await sb.from('comentarios').select(SEL_COMENT)
@@ -159,6 +178,9 @@ window.Conta = (function () {
   }
   async function enviarComentario(dono, post, texto) {
     return checar(await sb.from('comentarios').insert({ dono, post, de: uid(), texto }).select(SEL_COMENT).single());
+  }
+  async function editarComentario(id, texto) {
+    return checar(await sb.from('comentarios').update({ texto }).eq('id', Number(id)).select(SEL_COMENT).single());
   }
   async function apagarComentario(id) { checar(await sb.from('comentarios').delete().eq('id', Number(id))); }
   async function comentariosNoMeu() {
@@ -208,8 +230,8 @@ window.Conta = (function () {
     configurado, iniciar, usuario, uid, logado, aoMudar,
     usuarioLivre, criarConta, entrar, sair,
     meuPerfil, criarPerfil, salvarPerfil, aoSalvar: f => aoSalvarOuvintes.push(f),
-    carregarRede, carregarPerfil, buscarPessoas, seguir, deixarDeSeguir, novidades,
-    comentariosDe, enviarComentario, apagarComentario,
+    carregarRede, carregarPerfil, carregarSeguidores, buscarPessoas, sugestoes, registrarVisita, seguir, deixarDeSeguir, novidades,
+    comentariosDe, enviarComentario, editarComentario, apagarComentario,
     enviarRecado, apagarRecado, enviarImagem, preferencia, guardarPreferencia,
     USUARIO_OK
   };
