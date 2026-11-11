@@ -502,6 +502,12 @@
     Pet.estado.coracaoAte = performance.now() + 1400;
     Pet.estado.rota = [];
     Pet.estado.espera = performance.now() + 1600;
+    if (perfil().pet) {
+      try {
+        const som = window.Musica.somPet(perfil().pet.tipo);
+        if (som) som.catch(e => avisar('⚠ Não consegui tocar o som do bichinho: ' + e.message));
+      } catch (e) { avisar('⚠ Não consegui tocar o som do bichinho: ' + e.message); }
+    }
   }
 
   // ================= lateral =================
@@ -554,6 +560,8 @@
   const CHAVE_SOM_TV = 'quartinho:somTv';
   let somTvPref = false;
   let jaInteragiu = false; // o navegador só deixa tocar som depois de um clique/toque
+  let quartoMusical = null;
+  let musicaPendente = false;
   try { somTvPref = localStorage.getItem(CHAVE_SOM_TV) === '1'; } catch (e) { /* ignora */ }
 
   const tvLigadaNoQuarto = () => {
@@ -575,9 +583,17 @@
     const r = document.getElementById('radio');
     if (r) r.innerHTML = htmlRadio();
   }
-  document.addEventListener('pointerdown', () => {
+  function liberarSom(e) {
     if (!jaInteragiu) { jaInteragiu = true; atualizarSomTV(); }
-  }, { capture: true });
+    if (musicaPendente && tela === 'quarto') {
+      musicaPendente = false;
+      const controle = e.target.closest && e.target.closest('[data-radio], [data-ouvir]');
+      const acionaControle = controle && (e.type === 'pointerdown' || e.key === 'Enter' || e.key === ' ');
+      if (!acionaControle) window.Musica.tocar(perfil().musica);
+    }
+  }
+  document.addEventListener('pointerdown', liberarSom, { capture: true });
+  document.addEventListener('keydown', liberarSom, { capture: true });
 
   function htmlSomTV() {
     const ligadaNoQuarto = tvLigadaNoQuarto();
@@ -701,6 +717,11 @@
       const pos = posicoes[c.dataset.cartao];
       if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y) && Number.isFinite(pos.w) && pos.w > 0) {
         c.style.width = Math.min(1, pos.w) * largura + 'px';
+        const grafico = c.querySelector('.barras-v-rolagem');
+        if (grafico) {
+          const necessario = grafico.scrollWidth + c.offsetWidth - grafico.clientWidth;
+          c.style.width = Math.min(largura, Math.max(c.offsetWidth, necessario)) + 'px';
+        }
       }
     });
     const base = raiz.getBoundingClientRect();
@@ -801,14 +822,9 @@
   function visitar(id) {
     if (!perfis[id] || id === atualId) return;
     document.querySelectorAll('.janela').forEach(fecharJanela);
-    const estavaTocando = !!window.Musica.tocando();
     atualId = id;
     Pet.estado = null;
     renderTudo();
-    if (estavaTocando) {
-      const m = perfil().musica;
-      if (window.Musica.FAIXAS[m]) window.Musica.tocar(m); else window.Musica.parar();
-    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -1012,16 +1028,7 @@
       titulo: '📀 Estante de DVDs', largura: 480,
       html() {
         const p = perfil();
-        return `<p>${p.assistidos.length} filme(s) na estante</p>
-          ${p.assistidos.length ? `<ul class="lista-filmes">${p.assistidos.map((f, i) => `
-            <li><span class="lombada" style="background:${corDe(f.titulo)}"></span>
-              <span><b>${esc(f.titulo)}</b> <small>${f.ano ? '(' + esc(f.ano) + ')' : ''} ${fmtData(f.data)}</small>
-                ${(() => { const m = window.Filmes.metaDe(f); return m && m.generos.length ? `<br><small class="generos">${m.generos.slice(0, 3).map(esc).join(' · ')}</small>` : ''; })()}
-                ${f.comentario ? `<span class="comentario-estante">“${esc(f.comentario)}”</span>` : ''}</span>
-              <span class="estrelas" title="${f.nota} de 5">${estrelas(f.nota)}</span>
-              ${ehMeu() ? `<button class="btn98 mini" data-tirar="${i}" aria-label="Tirar ${esc(f.titulo)} da estante">x</button>` : ''}
-            </li>`).join('')}</ul>` : '<p class="vazio">estante vazia... bora assistir algo!</p>'}
-          ${ehMeu() ? `<form class="form98" id="f-filme">
+        return `${ehMeu() ? `<form class="form98" id="f-filme">
             <fieldset><legend>Guardar filme na estante</legend>
               <div class="linha">
                 ${campo('Título (digite pra buscar)', 'titulo', '', 'text', 'required maxlength="80" placeholder="ex.: matrix"')}
@@ -1031,10 +1038,31 @@
               <label class="campo"><span>O que achou? (opcional)</span><textarea name="comentario" maxlength="280" rows="2" placeholder="ex.: chorei no final, recomendo demais"></textarea></label>
               <button class="btn98" type="submit">Guardar</button>
             </fieldset>
+          </form>` : ''}
+          <p>${p.assistidos.length} filme(s) na estante</p>
+          ${p.assistidos.length ? `<ul class="lista-filmes">${p.assistidos.map((f, i) => `
+            <li><span class="lombada" style="background:${corDe(f.titulo)}"></span>
+              <span><b>${esc(f.titulo)}</b> <small>${f.ano ? '(' + esc(f.ano) + ')' : ''} ${fmtData(f.data)}</small>
+                ${(() => { const m = window.Filmes.metaDe(f); return m && m.generos.length ? `<br><small class="generos">${m.generos.slice(0, 3).map(esc).join(' · ')}</small>` : ''; })()}
+                ${f.comentario ? `<span class="comentario-estante">“${esc(f.comentario)}”</span>` : ''}</span>
+              <span class="estrelas" title="${f.nota} de 5">${estrelas(f.nota)}</span>
+              ${ehMeu() ? `<button class="btn98 mini" data-tirar="${i}" aria-label="Tirar ${esc(f.titulo)} da estante">x</button>` : ''}
+            </li>`).join('')}</ul>` : '<p class="vazio">estante vazia... bora assistir algo!</p>'}
+          ${ehMeu() ? `<form class="form98" id="f-letterboxd">
+            <fieldset><legend>Importar avaliações do Letterboxd</legend>
+              <p><small>Escolha o CSV de avaliações ou cole seu conteúdo. A data importada é a data do arquivo, não necessariamente a data em que você assistiu.</small></p>
+              <label class="campo"><span>Arquivo CSV</span><input type="file" name="arquivo" accept=".csv,text/csv"></label>
+              <label class="campo"><span>Ou cole o CSV aqui</span><textarea name="csv" rows="3" placeholder="Date,Name,Year,Letterboxd URI,Rating"></textarea></label>
+              <button class="btn98" type="submit">Verificar importação</button>
+              <div data-importacao-status role="status" aria-live="polite"></div>
+              <div data-importacao-previa></div>
+            </fieldset>
           </form>` : ''}`;
       },
       bind(corpo, redesenhar) {
         let escolhido = null; // filme escolhido na busca (com ano, gêneros etc.)
+        let importacao = null;
+        let pedidoImportacao = 0;
         const form = corpo.querySelector('#f-filme');
         if (form) {
           window.U.prepararNotas(form);
@@ -1046,8 +1074,45 @@
             }
           });
         }
-        corpo.onsubmit = e => {
+        corpo.onsubmit = async e => {
           e.preventDefault();
+          if (e.target.id === 'f-letterboxd') {
+            const formImportar = e.target, status = formImportar.querySelector('[data-importacao-status]');
+            const previa = formImportar.querySelector('[data-importacao-previa]');
+            const botao = formImportar.querySelector('button[type=submit]');
+            const p = perfil();
+            const pedido = ++pedidoImportacao;
+            importacao = null;
+            previa.innerHTML = '';
+            botao.disabled = true;
+            status.textContent = 'Lendo o CSV...';
+            try {
+              if (!ehMeu() || (p.uid && !Conta.logado())) throw new Error('Entre na sua conta antes de importar.');
+              const arquivo = formImportar.elements.arquivo.files[0];
+              if (arquivo && arquivo.size > 2 * 1024 * 1024) throw new Error('O arquivo deve ter no máximo 2 MB.');
+              const texto = arquivo ? await arquivo.text() : formImportar.elements.csv.value;
+              if (texto.length > 2 * 1024 * 1024) throw new Error('O CSV deve ter no máximo 2 MB.');
+              const itens = window.Letterboxd.ler(texto);
+              if (!itens.length) throw new Error('O CSV não contém avaliações.');
+              const preparados = await window.Letterboxd.preparar(itens, (n, total) => {
+                if (formImportar.isConnected && pedido === pedidoImportacao) status.textContent = `Consultando filmes: ${n} de ${total}...`;
+              });
+              if (!formImportar.isConnected || pedido !== pedidoImportacao || perfil() !== p || !ehMeu()) return;
+              const resumo = window.Letterboxd.separar(preparados, p.assistidos);
+              importacao = { p, preparados };
+              status.textContent = `${resumo.novos.length} novo(s), ${resumo.duplicados} já existente(s) ou repetido(s), ${resumo.semInfo} sem correspondência exata no TMDB.`;
+              previa.innerHTML = `<p><small>Duplicatas são identificadas por link, ID do TMDB ou título e ano. Sem correspondência no TMDB, títulos diferentes do mesmo filme podem não ser reconhecidos; confira antes de importar.</small></p>
+                ${resumo.ignorados.length ? `<p><small>Não serão adicionados: ${resumo.ignorados.map(f => esc(f.titulo) + ' (' + esc(f.ano) + ')').join(', ')}</small></p>` : ''}
+                ${resumo.semInfo ? `<p><small>Sem dados do TMDB: ${resumo.novos.filter(f => !f.meta).map(f => esc(f.titulo) + ' (' + esc(f.ano) + ')').join(', ')}</small></p>` : ''}
+                ${resumo.novos.length ? '<button class="btn98" type="button" data-confirmar-letterboxd>Importar filmes novos</button>' : ''}`;
+            } catch (erro) {
+              if (formImportar.isConnected && pedido === pedidoImportacao) status.textContent = '⚠ ' + erro.message;
+            } finally {
+              if (formImportar.isConnected) botao.disabled = false;
+            }
+            return;
+          }
+          if (!ehMeu()) return;
           const fd = new FormData(e.target);
           const titulo = String(fd.get('titulo')).trim();
           if (!titulo) return;
@@ -1059,7 +1124,30 @@
           mudou(); redesenhar();
           corpo.querySelector('input[name=titulo]').focus();
         };
+        corpo.oninput = corpo.onchange = e => {
+          if (!e.target.closest('#f-letterboxd')) return;
+          pedidoImportacao++;
+          importacao = null;
+          const formImportar = e.target.closest('#f-letterboxd');
+          formImportar.querySelector('[data-importacao-previa]').innerHTML = '';
+          formImportar.querySelector('[data-importacao-status]').textContent = '';
+        };
         corpo.onclick = e => {
+          if (e.target.closest('[data-confirmar-letterboxd]')) {
+            if (!importacao || !ehMeu() || perfil() !== importacao.p) return;
+            const p = perfil(), resumo = window.Letterboxd.separar(importacao.preparados, p.assistidos);
+            if (p.uid && !Conta.logado()) { avisar('⚠ Entre na sua conta antes de importar.'); return; }
+            p.assistidos.unshift(...resumo.novos);
+            if (!salvar()) {
+              p.assistidos.splice(0, resumo.novos.length);
+              avisar('⚠ Não consegui salvar a importação neste navegador.');
+              return;
+            }
+            importacao = null;
+            renderTudo(); atualizarArrumar(); redesenhar();
+            avisar(`${resumo.novos.length} filme(s) importado(s); ${resumo.duplicados} já existente(s) ou repetido(s).${Conta.logado() ? ' Salvando na nuvem...' : ''}`);
+            return;
+          }
           const b = e.target.closest('[data-tirar]');
           if (!b || !ehMeu()) return;
           perfil().assistidos.splice(Number(b.dataset.tirar), 1);
@@ -1148,13 +1236,28 @@
         if (this.aba === 'listas') {
           painel = `<p class="caminho">C:\\Meus Documentos\\Listas</p>
             ${p.listas.map((l, i) => `
-              <fieldset><legend>📋 ${esc(l.nome)}</legend>
-                ${l.itens.length ? `<ol class="itens-lista">${l.itens.map((it, j) => `<li>${esc(it)}${ehMeu() ? `<button class="btn98 mini" data-tirar-item="${i}:${j}" aria-label="Remover ${esc(it)}">x</button>` : ''}</li>`).join('')}</ol>` : '<p class="vazio">lista vazia</p>'}
+              <section class="livro-lista"><h3 class="livro-titulo">✂ ${esc(l.nome)}</h3>
+                ${l.itens.length ? `<ol class="itens-lista">${l.itens.map((it, j) => {
+                  const personagem = it && typeof it === 'object' && it.fonte === 'wikidata' && /^Q[1-9]\d*$/.test(it.id);
+                  const nome = personagem ? it.nome : it;
+                  const imagem = personagem && urlSegura(it.imagem);
+                  return `<li class="recorte-lista">
+                    ${personagem ? `<div class="foto-personagem"${imagem ? '' : ` data-foto-wikidata="${esc(it.id)}"`}>${imagem ? `<img src="${esc(imagem)}" alt="" loading="lazy">` : '<span>✦<br>buscando foto...</span>'}</div>` : '<div class="recorte-icone" aria-hidden="true">✦</div>'}
+                    <div class="recorte-texto">${personagem ? `<a href="https://www.wikidata.org/wiki/${it.id}" target="_blank" rel="noopener">${esc(nome)}</a>${it.descricao ? ` <small>${esc(it.descricao)}</small>` : ''}` : esc(nome)}</div>
+                    ${ehMeu() ? `<div class="recorte-acoes">${personagem ? `<label class="btn98 mini botao-arquivo">📷 foto<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" data-foto-lista="${i}:${j}" aria-label="Enviar foto de ${esc(nome)}"></label>${imagem ? `<button class="btn98 mini" type="button" data-remover-foto="${i}:${j}" aria-label="Remover foto de ${esc(nome)}">sem foto</button>` : ''}` : ''}<button class="btn98 mini" data-tirar-item="${i}:${j}" aria-label="Remover ${esc(nome)}">x</button></div>` : ''}
+                  </li>`;
+                }).join('')}</ol>` : '<p class="vazio">lista vazia</p>'}
                 ${ehMeu() ? `<form class="form98 linha" data-lista="${i}">
                   <input type="text" name="item" placeholder="adicionar..." required maxlength="80" aria-label="Novo item em ${esc(l.nome)}" style="flex:1">
                   <button class="btn98" type="submit">+</button>
+                </form>
+                <form class="form98 busca-personagem" data-personagens="${i}">
+                  <div class="linha"><input type="text" name="personagem" placeholder="buscar personagem..." required maxlength="80" aria-label="Buscar personagem para ${esc(l.nome)}" style="flex:1">
+                    <button class="btn98" type="submit">🔎 buscar</button></div>
+                  <div data-resultados-personagens aria-live="polite"></div>
                 </form>` : ''}
-              </fieldset>`).join('')}
+              </section>`).join('')}
+            <p><small>Personagens: dados do <a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>. A busca também pode encontrar outras coisas; confira a descrição. Algumas imagens não estão disponíveis; você pode enviar uma foto que tenha permissão para usar.</small></p>
             ${ehMeu() ? `<form class="form98 linha" data-nova-lista>
               <input type="text" name="nome" placeholder="nome da nova lista" required maxlength="40" aria-label="Nome da nova lista" style="flex:1">
               <button class="btn98" type="submit">Nova lista</button>
@@ -1171,9 +1274,81 @@
           <div class="painel">${painel}</div>`;
       },
       bind(corpo, redesenhar) {
+        const resultados = new Map();
+        const pedidos = new Map();
+        corpo.querySelectorAll('.foto-personagem img').forEach(img => {
+          img.addEventListener('error', () => { img.parentNode.textContent = '⚠ não foi possível carregar a foto'; });
+        });
+        const fotos = [...corpo.querySelectorAll('[data-foto-wikidata]')];
+        if (fotos.length) {
+          window.Wikidata.imagens(fotos.map(f => f.dataset.fotoWikidata)).then(imagens => {
+            for (const caixa of fotos) {
+              if (!caixa.isConnected) continue;
+              const imagem = imagens.get(caixa.dataset.fotoWikidata);
+              if (!imagem) { caixa.textContent = '✦ sem foto disponível'; continue; }
+              caixa.innerHTML = `<img src="${esc(imagem.url)}" alt="" loading="lazy">
+                <small class="credito-foto">${esc(imagem.autor)} · ${imagem.licencaUrl ? `<a href="${esc(imagem.licencaUrl)}" target="_blank" rel="noopener">${esc(imagem.licenca)}</a>` : esc(imagem.licenca)} · <a href="${esc(imagem.pagina)}" target="_blank" rel="noopener">Commons</a></small>`;
+              caixa.querySelector('img').addEventListener('error', () => { caixa.textContent = '⚠ não foi possível carregar a foto'; });
+            }
+          }).catch(erro => {
+            for (const caixa of fotos) if (caixa.isConnected) caixa.textContent = '⚠ ' + erro.message;
+          });
+        }
+        corpo.onchange = async e => {
+          const input = e.target.closest('[data-foto-lista]');
+          if (!input || !input.files[0] || !ehMeu()) return;
+          const [i, j] = input.dataset.fotoLista.split(':').map(Number);
+          const p = perfil(), lista = p.listas[i], item = lista && lista.itens[j];
+          if (!item || typeof item !== 'object' || item.fonte !== 'wikidata') return;
+          input.disabled = true;
+          try {
+            if (p.uid && !Conta.logado()) throw new Error('Entre na sua conta antes de salvar a foto.');
+            const imagem = await guardarImagem(await imagemParaPoster(input.files[0], 240, 300));
+            if (!input.isConnected || !ehMeu() || perfil() !== p || !lista.itens.includes(item)) return;
+            const anterior = item.imagem;
+            item.imagem = imagem;
+            if (!salvar()) { item.imagem = anterior; throw new Error('Não consegui salvar a foto neste navegador.'); }
+            renderTudo(); atualizarArrumar(); redesenhar();
+          } catch (erro) {
+            avisar('⚠ Não consegui adicionar a foto: ' + erro.message);
+          } finally {
+            input.disabled = false;
+          }
+        };
+        corpo.oninput = e => {
+          const form = e.target.closest('[data-personagens]');
+          if (!form) return;
+          pedidos.delete(form);
+          resultados.delete(form);
+          form.querySelector('[data-resultados-personagens]').textContent = '';
+        };
         corpo.onclick = e => {
           const aba = e.target.closest('[data-aba]');
           if (aba) { JANELAS.computador.aba = aba.dataset.aba; redesenhar(); return; }
+          const removerFoto = e.target.closest('[data-remover-foto]');
+          if (removerFoto && ehMeu()) {
+            const [i, j] = removerFoto.dataset.removerFoto.split(':').map(Number);
+            const lista = perfil().listas[i], item = lista && lista.itens[j];
+            if (item && typeof item === 'object' && item.imagem) {
+              const anterior = item.imagem;
+              delete item.imagem;
+              if (!salvar()) { item.imagem = anterior; avisar('⚠ Não consegui remover a foto.'); return; }
+              renderTudo(); atualizarArrumar(); redesenhar();
+            }
+            return;
+          }
+          const adicionar = e.target.closest('[data-personagem-resultado]');
+          if (adicionar && ehMeu()) {
+            const form = adicionar.closest('[data-personagens]');
+            const itens = resultados.get(form);
+            const item = itens && itens[Number(adicionar.dataset.personagemResultado)];
+            const lista = perfil().listas[Number(form.dataset.personagens)];
+            if (item && lista) {
+              lista.itens.push({ fonte: 'wikidata', id: item.id, nome: item.nome, descricao: item.descricao });
+              mudou(); redesenhar();
+            }
+            return;
+          }
           const tirar = e.target.closest('[data-tirar-item]');
           if (tirar && ehMeu()) {
             const [i, j] = tirar.dataset.tirarItem.split(':').map(Number);
@@ -1181,10 +1356,30 @@
             mudou(); redesenhar();
           }
         };
-        corpo.onsubmit = e => {
+        corpo.onsubmit = async e => {
           e.preventDefault();
           if (!ehMeu()) return;
           const f = e.target, fd = new FormData(f), p = perfil();
+          if (f.dataset.personagens !== undefined) {
+            const texto = String(fd.get('personagem') || '').trim();
+            const saida = f.querySelector('[data-resultados-personagens]');
+            if (texto.length < 2) { saida.textContent = 'Digite pelo menos 2 caracteres.'; return; }
+            const atual = {};
+            pedidos.set(f, atual);
+            resultados.delete(f);
+            saida.textContent = 'Buscando no Wikidata...';
+            try {
+              const itens = await window.Wikidata.buscar(texto);
+              if (!f.isConnected || pedidos.get(f) !== atual || f.elements.personagem.value.trim() !== texto) return;
+              resultados.set(f, itens);
+              saida.innerHTML = itens.length ? `<ul class="resultados-personagens">${itens.map((it, i) =>
+                `<li><button class="btn98" type="button" data-personagem-resultado="${i}">+ ${esc(it.nome)}</button> <small>${esc(it.descricao || 'sem descrição')} · ${esc(it.id)}</small></li>`).join('')}</ul>`
+                : '<p class="vazio">Nenhum resultado encontrado.</p>';
+            } catch (erro) {
+              if (f.isConnected && pedidos.get(f) === atual && f.elements.personagem.value.trim() === texto) saida.textContent = '⚠ ' + erro.message;
+            }
+            return;
+          }
           if (f.dataset.lista !== undefined) p.listas[Number(f.dataset.lista)].itens.push(String(fd.get('item')).trim());
           else if (f.hasAttribute('data-nova-lista')) p.listas.push({ nome: String(fd.get('nome')).trim(), itens: [] });
           else if (f.hasAttribute('data-diario')) p.diario.unshift({ data: hoje(), quando: new Date().toISOString(), texto: String(fd.get('texto')).trim() });
@@ -1771,6 +1966,15 @@
       mostrarTela('quarto');
       if (id !== atualId) visitar(id); else renderTudo();
       mostrarTela('quarto');
+      if (estadoConta !== 'carregando' && quartoMusical !== id) {
+        quartoMusical = id;
+        if (window.Musica.FAIXAS[perfil().musica]) {
+          if (jaInteragiu) window.Musica.tocar(perfil().musica); else musicaPendente = true;
+        } else {
+          musicaPendente = false;
+          if (window.Musica.tocando()) window.Musica.parar();
+        }
+      }
       if (partes[2] && JANELAS[partes[2]]) abrir(partes[2]);
       return;
     }
@@ -1779,6 +1983,9 @@
       cancelAnimationFrame(Pet.raf);
       window.Blog.limpar();
       document.querySelectorAll('.janela:not(#jan-tmdb):not(#jan-conta):not(#jan-amigos):not(#jan-notificacoes)').forEach(fecharJanela);
+      quartoMusical = null;
+      musicaPendente = false;
+      if (window.Musica.tocando()) window.Musica.parar();
       atualizarSomTV();
     };
     if (partes[0] === 'stats') {
@@ -1841,6 +2048,11 @@
     const sobe = async u => (ehUpload(u) ? Conta.enviarImagem(u) : u);
     d.avatar = await sobe(d.avatar);
     for (const po of d.posteres || []) po.imagem = await sobe(po.imagem);
+    for (const lista of d.listas || []) {
+      for (const item of lista.itens || []) {
+        if (item && typeof item === 'object' && item.imagem) item.imagem = await sobe(item.imagem);
+      }
+    }
     if (d.blog) {
       d.blog.imagem = await sobe(d.blog.imagem);
       for (const s of d.blog.stickers || []) if (s.src) s.src = await sobe(s.src);

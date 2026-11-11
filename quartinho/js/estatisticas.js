@@ -12,7 +12,8 @@ window.Stats = (function () {
   const CARTOES = [
     ['numeros', 'Em números'], ['generos', 'Gêneros favoritos'], ['decadas', 'Por década'],
     ['exigencia', 'Exigente ou pega leve?'], ['notas', 'Como dá notas'], ['diretores', 'Diretores mais vistos'],
-    ['paises', 'Volta ao mundo'], ['atores', 'Atores que mais aparecem'], ['compat', 'Compatibilidade']
+    ['paises', 'Volta ao mundo'], ['atores', 'Atores que mais aparecem'], ['compat', 'Compatibilidade'],
+    ['generos-notas', 'Gêneros mais bem avaliados']
   ];
   const PERSONALIDADE = {
     'Terror': 'alma corajosa do sofá 👻', 'Comédia': 'fábrica de risadas 😂', 'Romance': 'coração mole 💘',
@@ -20,7 +21,9 @@ window.Stats = (function () {
     'Drama': 'lencinho sempre à mão 🥲', 'Fantasia': 'passaporte pra Terra Média 🧙', 'Mistério': 'detetive de pijama 🔎',
     'Crime': 'mente criminosa (só na ficção) 🕵️', 'Aventura': 'mochila nas costas 🗺️', 'Família': 'sessão da tarde raiz 🍿'
   };
-  const bandeira = iso => /^[A-Z]{2}$/.test(iso) ? String.fromCodePoint(...[...iso].map(c => 127397 + c.charCodeAt(0))) : '🏳️';
+  const bandeira = iso => /^[A-Z]{2}$/.test(iso)
+    ? `<span class="bandeira" aria-hidden="true">🏳️<img src="https://flagcdn.com/w40/${iso.toLowerCase()}.png" alt="" loading="lazy" referrerpolicy="no-referrer"></span>`
+    : '<span aria-hidden="true">🏳️</span>';
   const nomePais = iso => {
     try { return new Intl.DisplayNames(['pt-BR'], { type: 'region' }).of(iso); } catch (e) { return iso; }
   };
@@ -38,6 +41,15 @@ window.Stats = (function () {
     const filmes = com.filter(x => x.m.tipo !== 'serie');
     const generos = contar(com.flatMap(x => x.m.generos));
     const totalGeneros = generos.reduce((s, [, n]) => s + n, 0) || 1;
+    const notasPorGenero = new Map();
+    for (const { f, m } of com) {
+      if (typeof f.nota !== 'number' || !Number.isFinite(f.nota) || f.nota < 0.5 || f.nota > 5) continue;
+      for (const genero of new Set(m.generos)) {
+        if (!genero) continue;
+        if (!notasPorGenero.has(genero)) notasPorGenero.set(genero, []);
+        notasPorGenero.get(genero).push(f.nota);
+      }
+    }
     const decadas = contar(itens.map(x => Number(x.f.ano) ? Math.floor(Number(x.f.ano) / 10) * 10 : null))
       .sort((a, b) => Number(a[0]) - Number(b[0]));
     const minutos = filmes.reduce((s, x) => s + (Number(x.m.duracao) || 0), 0);
@@ -49,11 +61,17 @@ window.Stats = (function () {
       semInfo: itens.length - com.length,
       series: com.length - filmes.length,
       generos: generos.map(([g, n]) => ({ nome: g, n, pct: Math.round(n / totalGeneros * 100) })),
-      decadas: decadas.map(([d, n]) => ({ nome: d + 's', n })),
+      generosNotas: [...notasPorGenero].map(([nome, notas]) => ({ nome, media: media(notas), n: notas.length }))
+        .sort((a, b) => b.media - a.media || b.n - a.n || a.nome.localeCompare(b.nome)).slice(0, 3),
+      decadas: decadas.map(([d, n]) => ({
+        nome: d + 's', n,
+        filmes: itens.filter(x => Number(x.f.ano) && Math.floor(Number(x.f.ano) / 10) * 10 === Number(d))
+          .map(x => ({ titulo: x.f.titulo, ano: x.f.ano }))
+      })),
       minutos,
       mediaNotas: media(itens.map(x => x.f.nota)),
       exigencia: comNotaTmdb.length ? { minha: minhaMedia, mundo: mediaMundo, diferenca: minhaMedia - mediaMundo, base: comNotaTmdb.length } : null,
-      diretores: contar(com.flatMap(x => x.m.diretor ? [x.m.diretor] : [])).slice(0, 5),
+      diretores: contar(com.flatMap(x => x.m.diretor ? [x.m.diretor] : [])).slice(0, 10),
       atores: contar(com.flatMap(x => x.m.elenco || [])).filter(([, n]) => n > 1).slice(0, 5),
       paises: contar(com.flatMap(x => x.m.pais || [])),
       notas: [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5]
@@ -97,11 +115,56 @@ window.Stats = (function () {
   function barrasV(itens) {
     if (!itens.length) return '<p class="vazio">sem dados ainda</p>';
     const max = Math.max(...itens.map(i => i.n));
-    return `<div class="barras-v" role="img" aria-label="${itens.map(i => `${i.nome}: ${i.n}`).join(', ')}">${itens.map((it, k) => `
-      <div class="coluna"><span class="num">${it.n}</span>
+    return `<div class="grafico-decadas"><div class="barras-v-rolagem" tabindex="0" role="region" aria-label="Gráfico por década"><div class="barras-v" style="--colunas:${itens.length}">${itens.map((it, k) => `
+      <button class="coluna" type="button" data-decada="${esc(it.nome)}" data-filmes-decada="${esc(JSON.stringify(it.filmes))}" aria-label="${esc(it.nome)}: ${it.n} título(s), mostrar lista" aria-expanded="false"><span class="num">${it.n}</span>
         <span class="barra" style="height:${Math.max(6, it.n / max * 100)}%;--cor:${CORES[k % CORES.length]}"></span>
-        <span class="rotulo">${esc(it.nome)}</span></div>`).join('')}</div>`;
+        <span class="rotulo">${esc(it.nome)}</span></button>`).join('')}</div></div><div class="filmes-decada" hidden></div></div>`;
   }
+
+  function mostrarDecada(botao) {
+    const grafico = botao.closest('.grafico-decadas');
+    const painel = grafico.querySelector('.filmes-decada');
+    grafico.querySelectorAll('[data-decada]').forEach(b => b.setAttribute('aria-expanded', String(b === botao)));
+    const filmes = JSON.parse(botao.dataset.filmesDecada);
+    painel.innerHTML = `<button type="button" class="fechar-decada" aria-label="Fechar lista de filmes">×</button><b>📼 ${esc(botao.dataset.decada)} · ${filmes.length} título(s)</b><ul>${filmes.map(f =>
+      `<li>${esc(f.titulo)} <small>(${esc(f.ano)})</small></li>`).join('')}</ul>`;
+    painel.hidden = false;
+  }
+  function fecharDecada(grafico) {
+    grafico.querySelector('.filmes-decada').hidden = true;
+    grafico.querySelectorAll('[data-decada]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+  }
+  document.addEventListener('pointerover', e => {
+    if (e.pointerType === 'touch') return;
+    const botao = e.target.closest('[data-decada]');
+    if (botao) mostrarDecada(botao);
+  });
+  document.addEventListener('pointerout', e => {
+    const grafico = e.target.closest('.grafico-decadas');
+    if (grafico && !grafico.contains(e.relatedTarget) && !grafico.contains(document.activeElement)) fecharDecada(grafico);
+  });
+  document.addEventListener('focusin', e => {
+    const botao = e.target.closest('[data-decada]');
+    if (botao) mostrarDecada(botao);
+  });
+  document.addEventListener('focusout', e => {
+    const grafico = e.target.closest('.grafico-decadas');
+    if (grafico && !grafico.contains(e.relatedTarget) && !grafico.matches(':hover')) fecharDecada(grafico);
+  });
+  document.addEventListener('click', e => {
+    const fechar = e.target.closest('.fechar-decada');
+    if (fechar) { fecharDecada(fechar.closest('.grafico-decadas')); return; }
+    const botao = e.target.closest('[data-decada]');
+    if (botao) mostrarDecada(botao);
+  });
+  document.addEventListener('error', e => {
+    if (e.target instanceof HTMLImageElement && e.target.matches('.bandeira img')) e.target.hidden = true;
+  }, true);
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const grafico = e.target.closest('.grafico-decadas');
+    if (grafico) fecharDecada(grafico);
+  });
   function barrasNotas(itens) {
     if (!itens.length) return '<p class="vazio">sem dados ainda</p>';
     const max = Math.max(...itens.map(i => i.qtd));
@@ -148,14 +211,17 @@ window.Stats = (function () {
         <div><dt>nota média</dt><dd class="estrelas-feed" aria-label="nota média ${Math.round(r.mediaNotas * 2) / 2} de 5">${estrelas(Math.round(r.mediaNotas * 2) / 2)}</dd></div>
         <div><dt>gêneros diferentes</dt><dd>${r.generos.length}</dd></div>
       </dl>${r.semInfo ? `<p><small>${r.semInfo} título(s) sem informações — guarde pela busca pra entrarem nas contas</small></p>` : ''}`) },
-      { id: 'generos', html: janela('🎭 gêneros favoritos', barrasH(r.generos.slice(0, 7), true)) },
-      { id: 'decadas', html: janela('📅 por década', barrasV(r.decadas)) },
+      { id: 'generos', html: janela('🎭 gêneros favoritos', barrasH(r.generos.slice(0, 10), true)) },
+      { id: 'decadas', html: janela('📅 por década', barrasV(r.decadas), r.decadas.length > 4 ? 'decadas-largo' : '') },
       { id: 'exigencia', html: janela('🍅 exigente ou pega leve?', exigencia) },
       { id: 'notas', html: janela('⭐ como ' + voce + ' dá notas', barrasNotas(r.notas)) },
       { id: 'diretores', html: janela('🎬 diretores mais vistos', r.diretores.length ? `<ol class="lista-top">${r.diretores.map(([d, n]) => `<li>${esc(d)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
-      { id: 'paises', html: janela('🌍 volta ao mundo', r.paises.length ? `<ul class="paises">${r.paises.map(([iso, n]) => `<li><span class="bandeira" aria-hidden="true">${bandeira(iso)}</span> ${esc(nomePais(iso))} <small>(${n})</small></li>`).join('')}</ul>` : '<p class="vazio">sem dados ainda</p>') },
+      { id: 'paises', html: janela('🌍 volta ao mundo', r.paises.length ? `<ul class="paises">${r.paises.slice(0, 7).map(([iso, n]) => `<li>${bandeira(iso)} ${esc(nomePais(iso))} <small>(${n})</small></li>`).join('')}</ul>` : '<p class="vazio">sem dados ainda</p>') },
       { id: 'atores', html: janela('🌟 atores que mais aparecem', r.atores.length ? `<ol class="lista-top">${r.atores.map(([a, n]) => `<li>${esc(a)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
-      { id: 'compat', html: janela(ehEu ? '🤝 compatibilidade com os amigos' : `🤝 compatibilidade de ${esc(p.nome)}`, compatHtml, 'largo') }
+      { id: 'compat', html: janela(ehEu ? '🤝 compatibilidade com os amigos' : `🤝 compatibilidade de ${esc(p.nome)}`, compatHtml, 'largo') },
+      { id: 'generos-notas', html: janela('⭐ gêneros mais bem avaliados', r.generosNotas.length
+        ? `<ol class="lista-top">${r.generosNotas.map(g => `<li>${esc(g.nome)} — <b>${g.media.toFixed(2).replace('.', ',')} / 5</b> <small>(${g.n} título${g.n === 1 ? '' : 's'})</small></li>`).join('')}</ol><p><small>Média das notas dadas aos títulos de cada gênero.</small></p>`
+        : '<p class="vazio">sem títulos avaliados com gênero</p>') }
     ];
   }
 

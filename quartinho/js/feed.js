@@ -59,7 +59,7 @@ window.Feed = (function () {
   function naListaQueroVer(titulo) {
     const t = titulo.toLowerCase();
     const p = eu();
-    return (p.listas || []).some(l => l.itens.some(i => i.toLowerCase() === t)) || (p.assistidos || []).some(f => f.titulo.toLowerCase() === t);
+    return (p.listas || []).some(l => l.itens.some(i => typeof i === 'string' && i.toLowerCase() === t)) || (p.assistidos || []).some(f => f.titulo.toLowerCase() === t);
   }
 
   // ---------- pedaços de HTML ----------

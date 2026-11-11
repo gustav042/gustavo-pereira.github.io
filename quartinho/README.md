@@ -54,7 +54,13 @@ Observação: no plano grátis, o Supabase pausa o projeto depois de uma semana 
 - **Estatísticas (📊)**: gêneros favoritos, décadas, horas de filme, notas comparadas com a média do mundo,
   diretores, países e compatibilidade com os amigos. Os cartões aparecem no próprio quartinho e nos visitados,
   ao lado e abaixo do quarto; cada pessoa escolhe quais exibir em “Decorar e mudar a vibe”. A compatibilidade
-  aparece apenas no próprio quarto, e os quartinhos visitados também mostram seus seguidores. No rodapé, o
+  aparece apenas no próprio quarto, “Volta ao mundo” mostra os sete países mais frequentes com bandeiras
+  do [Flagpedia](https://flagpedia.net/), e o gráfico por década mostra os títulos ao passar o mouse ou
+  selecionar uma década. O gráfico se ajusta ao conteúdo (com rolagem horizontal quando necessário).
+  “Gêneros mais bem avaliados” mostra as três maiores médias das notas pessoais (de 0,5 a 5),
+  com a quantidade de títulos em cada gênero; empates são ordenados pela quantidade e depois pelo nome.
+  Se já escolheu seus cartões, ative o novo em “Decorar e mudar a vibe”.
+  Os quartinhos visitados também mostram seus seguidores. No rodapé, o
   contador mostra as visitas ao quartinho aberto. No computador, arraste diretamente os cartões de estatísticas
   e da lateral (ou use as setas do teclado na alça de cada cartão); “Restaurar posições dos cartões”
   desfaz a organização. As posições são salvas no perfil e aparecem para as visitas no desktop; no celular,
@@ -68,13 +74,25 @@ Observação: no plano grátis, o Supabase pausa o projeto depois de uma semana 
 - **Quarto clicável**: pixel art com texturas, detalhes e sombras; estante de DVDs (filmes assistidos),
   pôsteres (favoritos), TV (assistindo agora), computador (listas e diário), mural (recados),
   prateleira de troféus (conquistas), aparelho de som (liga a música).
+- **Listas de personagens**: no computador, busque nomes no Wikidata e adicione os resultados a qualquer
+  lista. A busca também pode trazer obras ou pessoas, então confira a descrição antes de escolher.
+  As listas aparecem como um livro de colagens. Fotos disponíveis no Wikimedia Commons aparecem com
+  seus créditos e licença; também é possível enviar uma foto que você tenha permissão para usar.
+  Os dados são do [Wikidata](https://www.wikidata.org/); não é necessária uma chave de API.
+- **Importar Letterboxd**: na estante, escolha o CSV de avaliações ou cole seu conteúdo e confira a prévia
+  antes de importar. Os registros existentes são preservados; a comparação usa link do Letterboxd, ID do
+  TMDB ou título e ano. Sem correspondência exata no TMDB, filmes com nomes diferentes podem não ser
+  identificados como duplicados e não entram nas estatísticas que dependem desses dados. A data importada
+  é a do CSV de avaliações, que não é necessariamente a data em que o filme foi assistido.
 - **Arrumar móveis**: arrastar, adicionar do catálogo, trocar modelo (3 de cama, tapete, assento, armário,
   criado-mudo, luminária e planta), trocar cor/material, girar (camas, tapetes e assentos) e remover.
   Atalhos: setas ajustam a posição, R gira, Delete tira do quarto.
 - **Vibe**: papel de parede, chão, luz (dia, fim de tarde, noite, neon, com luminárias e telas brilhando à noite),
   efeitos (neve, corações, brilhinhos, vaga-lumes) e música do quarto.
-- **Bichinho**: gato, cachorro, coelho ou hamster, com cor e nome. Ele anda pelo quarto desviando dos móveis; clique pra fazer carinho.
+- **Bichinho**: gato, cachorro, coelho ou hamster, com cor e nome. Ele anda pelo quarto desviando dos móveis; clique pra fazer carinho e ouvir um som chiptune.
 - **Rádio**: 4 músicas chiptune originais, geradas com a Web Audio API (sem arquivos de áudio).
+  A música escolhida começa ao entrar no quarto e para ao sair; em acessos diretos, o navegador pode
+  exigir um clique ou uma tecla antes de liberar o som. A TV tem chiado opcional, sem vozes.
 - **Blog personalizável (🎨)**: temas prontos, fundo da página (padrões em pixel, degradê, cor lisa ou imagem
   enviada), estilo das caixas (pixel, Windows 98, fofinho, neon, caderno, vidro Y2K), fonte, título animado
   (glitter, arco-íris, neon, 3D, ondinha), letreiro, cursor e rastro do mouse.

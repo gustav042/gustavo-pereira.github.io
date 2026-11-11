@@ -71,13 +71,13 @@ body {
 .visitando-layout #stats-lateral .relatorio-corpo { min-height: 0; padding: 6px; }
 .visitando-layout #stats-lateral .relatorio .titulo-caixa { font-size: 9px; }
 .visitando-layout #stats-lateral .barras-h li { grid-template-columns: minmax(0, 1fr) 45px 22px; gap: 4px; }
-.visitando-layout #stats-quarto .stats-grade { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.visitando-layout #stats-quarto .stats-grade { grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 12px; }
 .meu-quartinho-layout { grid-template-columns: minmax(210px, 270px) minmax(0, 1fr); }
 .meu-quartinho-layout > #lateral { grid-column: 1; grid-row: 2; }
 .meu-quartinho-layout > .coluna-quartinho { grid-column: 2; grid-row: 2; min-width: 0; display: grid; gap: 8px; }
 .meu-quartinho-layout .area-quarto { min-width: 0; }
 .meu-quartinho-layout #stats-quarto { margin-top: 0; min-width: 0; }
-.meu-quartinho-layout #stats-quarto .stats-grade { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.meu-quartinho-layout #stats-quarto .stats-grade { grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 12px; }
 @media (max-width: 1100px) and (min-width: 821px) {
   .conteudo.visitando-layout { grid-template-columns: minmax(210px, 270px) minmax(0, 1fr); }
   .visitando-layout > #stats-lateral { grid-column: 1; grid-row: 3; }
@@ -360,9 +360,30 @@ legend { padding: 0 4px; }
 .aba[aria-selected="true"] { z-index: 1; padding-bottom: 5px; top: 0; }
 .painel { border: 2px solid; border-color: #fff #000 #000 #fff; padding: 10px; }
 .caminho { font-size: 16px; color: #333; margin: 0 0 8px; }
-.itens-lista { margin: 0 0 6px; padding-left: 26px; }
-.itens-lista li { margin: 2px 0; }
-.itens-lista li button { margin-left: 6px; }
+.livro-lista {
+  position: relative; margin: 14px 0 20px; padding: 18px 14px 14px 27px;
+  color: #433332; border: 1px solid #c9ad8b; border-radius: 3px 12px 12px 3px;
+  background: linear-gradient(90deg, #d6b99b 0, #f8e9d1 16px, transparent 17px),
+    repeating-linear-gradient(#fff9eb 0 27px, #ecdcca 28px);
+  box-shadow: -4px 4px 0 #b58f73, 2px 6px 9px rgba(48, 24, 19, .22);
+}
+.livro-titulo { width: fit-content; max-width: 100%; margin: -26px 0 16px; padding: 4px 12px; background: #f2c5bd; box-shadow: 1px 2px 3px #ad8b76; transform: rotate(-1deg); overflow-wrap: anywhere; }
+.itens-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 14px; list-style: none; margin: 0 0 12px; padding: 0; counter-reset: recortes; }
+.recorte-lista { position: relative; min-width: 0; padding: 9px; background: #fff; box-shadow: 1px 3px 6px #bda996; transform: rotate(-1deg); counter-increment: recortes; }
+.recorte-lista:nth-child(even) { transform: rotate(1deg); background: #fff7e2; }
+.recorte-lista::before { content: ''; position: absolute; z-index: 1; width: 42px; height: 12px; top: -6px; left: calc(50% - 21px); transform: rotate(-3deg); background: rgba(235, 190, 160, .72); }
+.foto-personagem { min-height: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: #776563; background: #f1e7de; overflow-wrap: anywhere; }
+.foto-personagem img { width: 100%; height: 150px; object-fit: cover; }
+.credito-foto { padding: 3px; font-size: 13px; line-height: 1; }
+.recorte-icone { font-size: 30px; color: #d9988d; text-align: center; }
+.recorte-texto { margin-top: 6px; overflow-wrap: anywhere; line-height: 1.1; }
+.recorte-texto::before { content: counter(recortes) '. '; color: #9c6a65; }
+.recorte-texto small { display: block; color: #675550; margin-top: 3px; }
+.recorte-acoes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.livro-lista .form98 { margin-top: 8px; }
+.busca-personagem { margin-top: 6px; }
+.resultados-personagens { list-style: none; margin: 6px 0; padding: 0; }
+.resultados-personagens li { margin: 4px 0; }
 .entrada-diario { background: #fff; border: 2px solid; border-color: #808080 #fff #fff #808080; padding: 6px 8px; margin-bottom: 8px; }
 .entrada-diario time { font-family: var(--pixel); font-size: 9px; color: #000080; }
 .entrada-diario p { margin: 4px 0 0; white-space: pre-wrap; }
@@ -747,9 +768,9 @@ small.generos { color: #5a5a8a; }
 }
 .manchete b { font-family: var(--pixel); font-size: clamp(13px, 2.6vw, 20px); color: #c2185b; }
 .manchete span { font-size: 22px; }
-.stats-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.stats-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 16px; }
 .relatorio { background: #c0c0c0; color: #000; border: 2px solid; border-color: #fff #000 #000 #fff; box-shadow: 4px 4px 0 rgba(0,0,0,.5); }
-.relatorio.largo { grid-column: 1 / -1; }
+.relatorio.largo, .relatorio.decadas-largo { grid-column: 1 / -1; }
 .relatorio .titulo-caixa { margin: 3px 3px 0; }
 .relatorio-corpo { padding: 10px; background: #fff; margin: 3px; border: 2px solid; border-color: #808080 #fff #fff #808080; min-height: 120px; }
 .relatorio-corpo p { margin: 6px 0; }
@@ -766,18 +787,27 @@ small.generos { color: #5a5a8a; }
 .trilho { height: 14px; background: #eee; border: 1px solid #000; display: block; }
 .trilho .barra { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--cor) 0 6px, rgba(0,0,0,.15) 6px 7px); }
 .barras-h .valor { text-align: right; font-family: var(--pixel); font-size: 10px; }
-.barras-v { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding-top: 6px; }
-.barras-v .coluna { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+.barras-v-rolagem { max-width: 100%; overflow-x: auto; }
+.barras-v { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding-top: 6px; min-width: calc(var(--colunas) * 52px + (var(--colunas) - 1) * 8px); }
+.barras-v .coluna { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.barras-v .coluna:focus-visible { outline: 2px solid #000080; outline-offset: 2px; }
 .barras-v .barra { width: 100%; max-width: 40px; border: 1px solid #000; background: repeating-linear-gradient(0deg, var(--cor) 0 6px, rgba(0,0,0,.15) 6px 7px); }
 .barras-v .num { font-family: var(--pixel); font-size: 9px; margin-bottom: 2px; }
 .barras-v .rotulo { font-size: 15px; margin-top: 2px; }
+.grafico-decadas { position: relative; }
+.filmes-decada { position: absolute; top: 100%; left: 0; z-index: 1; box-sizing: border-box; width: 100%; padding: 8px; color: #000; background: #fffbd0; border: 2px solid #916d4e; box-shadow: 3px 3px 0 rgba(0,0,0,.2); touch-action: pan-y; }
+.filmes-decada .fechar-decada { float: right; cursor: pointer; }
+.filmes-decada ul { max-height: 180px; overflow-y: auto; margin: 4px 0 0; padding-left: 22px; }
+.filmes-decada li { overflow-wrap: anywhere; }
 .medidor { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .medidor div { text-align: center; border: 2px solid #000; padding: 6px; background: #fffbd0; }
 .medidor span { display: block; font-size: 15px; }
 .medidor b { font-family: var(--pixel); font-size: 18px; color: #c2185b; }
 .lista-top { margin: 0; padding-left: 24px; }
 .paises { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; }
-.bandeira { font-size: 20px; }
+.bandeira { position: relative; display: inline-block; width: 24px; vertical-align: middle; }
+.bandeira img { position: absolute; inset: 0; width: 24px; height: auto; }
+.bandeira img[hidden] { display: none; }
 .compat { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 16px; }
 .compat li { line-height: 1.2; }
 .compat a { color: #0000ee; }
@@ -912,6 +942,11 @@ body[data-caixa="vidro"] #tela-quarto .relatorio .titulo-caixa {
   background: linear-gradient(180deg, color-mix(in srgb, var(--destaque) 45%, #fff) 0 50%, var(--destaque) 50% 100%);
   color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.45); border: 0;
 }
+
+.relatorio:has(.filmes-decada:not([hidden])),
+.stats:has(.filmes-decada:not([hidden])),
+.coluna-quartinho:has(.filmes-decada:not([hidden])) { position: relative; z-index: 10; }
+body #tela-quarto .relatorio:has(.filmes-decada:not([hidden])) { overflow: visible; }
 
 .controles-cartoes { position: relative; z-index: 20; }
 .controles-cartoes small { display: block; margin: 0 0 8px; }

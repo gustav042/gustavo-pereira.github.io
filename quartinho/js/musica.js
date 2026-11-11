@@ -151,43 +151,38 @@ window.Musica = (function () {
     if (volumeGeral) volumeGeral.gain.value = v;
   }
 
-  // ================= som ambiente da TV =================
-  // Chiado de TV de tubo + duas "vozes" sintetizadas falando sílabas sem sentido, abafadas.
-  // Cada voz é uma onda dente-de-serra passando por dois filtros nas frequências de vogais.
-  const VOGAIS = [[730, 1090], [270, 2290], [530, 1840], [570, 840], [300, 870], [440, 1020], [660, 1720]];
-  let tv = null;
-
-  function falar(voz) {
-    if (!voz.ativa) return;
-    let t = ctx.currentTime + 0.05;
-    const silabas = 3 + Math.floor(Math.random() * 6);
-    for (let i = 0; i < silabas; i++) {
-      const dur = 0.12 + Math.random() * 0.16;
-      const v = VOGAIS[Math.floor(Math.random() * VOGAIS.length)];
-      voz.f1.frequency.setTargetAtTime(v[0], t, 0.03);
-      voz.f2.frequency.setTargetAtTime(v[1], t, 0.03);
-      voz.osc.frequency.setTargetAtTime(voz.base * (0.85 + Math.random() * 0.35), t, 0.05);
-      voz.g.gain.setTargetAtTime(voz.vol * (0.6 + Math.random() * 0.4), t, 0.02);
-      voz.g.gain.setTargetAtTime(voz.vol * 0.15, t + dur * 0.7, 0.03);
-      t += dur;
+  let ultimoSomPet = -Infinity;
+  function somPet(tipo) {
+    const sons = {
+      gato: [[0, 0.32, 620, 880, 480, 'sawtooth']],
+      cachorro: [[0, 0.13, 420, 220, 150, 'triangle'], [0.2, 0.13, 390, 200, 140, 'triangle']],
+      coelho: [[0, 0.10, 620, 780, 650, 'sine'], [0.15, 0.10, 700, 840, 660, 'sine']],
+      hamster: [[0, 0.09, 1300, 1800, 1200, 'sine'], [0.12, 0.08, 1500, 2000, 1400, 'sine']]
+    };
+    if (!sons[tipo]) return;
+    iniciarAudio();
+    const retomada = ctx.resume();
+    const agora = ctx.currentTime;
+    if (agora - ultimoSomPet < 0.5) return retomada;
+    ultimoSomPet = agora;
+    for (const [atraso, duracao, inicio, meio, fim, onda] of sons[tipo]) {
+      const t = agora + atraso, osc = ctx.createOscillator(), ganho = ctx.createGain();
+      osc.type = onda;
+      osc.frequency.setValueAtTime(inicio, t);
+      osc.frequency.exponentialRampToValueAtTime(meio, t + duracao * 0.35);
+      osc.frequency.exponentialRampToValueAtTime(fim, t + duracao);
+      ganho.gain.setValueAtTime(0.0001, t);
+      ganho.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+      ganho.gain.exponentialRampToValueAtTime(0.0001, t + duracao);
+      osc.connect(ganho).connect(volumeGeral);
+      osc.start(t); osc.stop(t + duracao + 0.01);
     }
-    voz.g.gain.setTargetAtTime(0, t, 0.05);
-    const pausa = 0.3 + Math.random() * 1.8;
-    voz.timer = setTimeout(() => falar(voz), (t - ctx.currentTime + pausa) * 1000);
+    return retomada;
   }
 
-  function criarVoz(destino, base, vol, atraso) {
-    const osc = ctx.createOscillator(), f1 = ctx.createBiquadFilter(), f2 = ctx.createBiquadFilter(), g = ctx.createGain();
-    osc.type = 'sawtooth'; osc.frequency.value = base;
-    f1.type = 'bandpass'; f1.Q.value = 6;
-    f2.type = 'bandpass'; f2.Q.value = 8;
-    g.gain.value = 0;
-    osc.connect(f1); osc.connect(f2); f1.connect(g); f2.connect(g); g.connect(destino);
-    osc.start();
-    const voz = { osc, g, f1, f2, base, vol, timer: null, ativa: true };
-    voz.timer = setTimeout(() => falar(voz), atraso);
-    return voz;
-  }
+  // ================= som ambiente da TV =================
+  // Chiado de TV de tubo.
+  let tv = null;
 
   function ligarTV() {
     iniciarAudio();
@@ -210,11 +205,7 @@ window.Musica = (function () {
     chiado.connect(hp).connect(lp).connect(gChiado).connect(nivel);
     chiado.start();
 
-    const abafa = ctx.createBiquadFilter();
-    abafa.type = 'lowpass'; abafa.frequency.value = 1800;
-    abafa.connect(nivel);
-    const vozes = [criarVoz(abafa, 135, 0.05, 200), criarVoz(abafa, 215, 0.04, 1300)];
-    tv = { saida, nivel, chiado, vozes };
+    tv = { saida, nivel, chiado };
     avisar();
   }
 
@@ -222,10 +213,9 @@ window.Musica = (function () {
     if (!tv) return;
     const velho = tv;
     tv = null;
-    velho.vozes.forEach(v => { v.ativa = false; clearTimeout(v.timer); });
     velho.saida.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
     setTimeout(() => {
-      try { velho.chiado.stop(); velho.vozes.forEach(v => v.osc.stop()); } catch (e) { /* já parou */ }
+      try { velho.chiado.stop(); } catch (e) { /* já parou */ }
       velho.saida.disconnect();
     }, 600);
     avisar();
@@ -241,6 +231,7 @@ window.Musica = (function () {
     FAIXAS,
     tocar,
     parar,
+    somPet,
     tocando: () => faixa,
     definirVolume,
     volume: () => volume,
