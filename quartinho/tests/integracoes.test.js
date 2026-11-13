@@ -34,6 +34,43 @@ test('CSV aceita vírgulas, aspas, CRLF e preserva data e meia estrela', () => {
   assert.equal(api.ler(cabecalho + '2021-01-01,"A ""quoted"" title",2000,https://boxd.it/a,5')[0].titulo, 'A "quoted" title');
 });
 
+test('Conta envia a lista de filmes para a Edge Function somente com sessão autenticada', async () => {
+  let chamada = null;
+  let sessao = { user: { id: 'usuario-teste' } };
+  const cliente = {
+    auth: {
+      getSession: async () => ({ data: { session: sessao } }),
+      onAuthStateChange() {}
+    },
+    functions: {
+      invoke: async (nome, opcoes) => {
+        chamada = { nome, opcoes };
+        return { data: { analise: 'Você gosta de histórias espaciais.', restantes: 4 }, error: null };
+      }
+    }
+  };
+  const contexto = {
+    window: {
+      QUARTINHO_SUPABASE: { url: 'https://exemplo.supabase.co', chave: 'chave-publica-teste' },
+      supabase: { createClient: () => cliente },
+      addEventListener() {}
+    },
+    document: { createElement: () => ({}) }
+  };
+  vm.createContext(contexto);
+  vm.runInContext(codigo('conta.js'), contexto);
+  const conta = contexto.window.Conta;
+  await conta.iniciar();
+  const filmes = [{ titulo: 'Filme favorito', ano: 2000 }];
+  assert.deepEqual(JSON.parse(JSON.stringify(await conta.analisarFilmes(filmes, 'segredo'))), { analise: 'Você gosta de histórias espaciais.', restantes: 4 });
+  assert.equal(chamada.nome, 'analisar-filmes');
+  assert.deepEqual(JSON.parse(JSON.stringify(chamada.opcoes.body)), { filmes, senha: 'segredo' });
+
+  sessao = null;
+  await conta.iniciar();
+  await assert.rejects(() => conta.analisarFilmes(filmes), /Entre na sua conta/);
+});
+
 test('CSV inválido é rejeitado antes da importação', () => {
   const api = carregarLetterboxd();
   assert.throws(() => api.ler('Name,Rating\nfoo,5'), /colunas/);

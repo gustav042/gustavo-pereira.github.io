@@ -49,6 +49,31 @@ As visitas aos perfis com conta são contadas no banco e compartilhadas; no modo
 Observação: no plano grátis, o Supabase pausa o projeto depois de uma semana sem nenhum acesso
 (é só entrar no painel e reativar).
 
+## Análise dos filmes com IA (Google Gemini)
+
+No seu quarto, entre na sua conta e clique no destaque **Analisar meus filmes 5 estrelas**.
+O site envia ao Google Gemini apenas os títulos e anos desses filmes; a análise abre numa janela própria por cima da estante e não é
+salva no perfil. Use o botão só se estiver de acordo com esse envio. A IA oferece uma leitura
+interpretativa dos seus gostos, não uma avaliação psicológica. O plano gratuito da API tem limites
+de uso e, nele, o Google pode usar os dados enviados para melhorar seus produtos.
+
+A chave do Gemini nunca fica no navegador nem no repositório: o site chama uma Edge Function
+autenticada do Supabase, que guarda a chave e conversa com a API. Para ativar:
+
+1. Crie uma chave de API no [Google AI Studio](https://aistudio.google.com/apikey).
+2. No painel do Supabase, em **Edge Functions → Secrets**, adicione `GEMINI_API_KEY` com essa chave.
+   Opcionalmente, adicione `GEMINI_MODEL` para escolher outro modelo; o padrão é `gemini-3.8-flash`.
+3. Instale e autentique a [Supabase CLI](https://supabase.com/docs/guides/cli), vincule este projeto
+   com `supabase link --project-ref <id-do-projeto>` e publique a função:
+   `supabase functions deploy analisar-filmes`.
+4. No **SQL Editor**, execute o conteúdo de `supabase/analises_ia.sql` (registra o uso para o limite).
+5. Opcional: adicione os secrets `ANALISE_SENHA_LIBERACAO` (use uma senha longa; ela libera o limite
+   nos testes) e `ANALISE_LIMITE_DIARIO` (padrão 5 análises por pessoa a cada 24 horas).
+6. Entre em uma conta do site. A função valida a sessão antes de chamar o Gemini.
+
+Para estudar o fluxo, veja `supabase/functions/analisar-filmes/index.ts` (validação e chamada ao
+Gemini), `js/conta.js` (invocação autenticada) e `js/app.js` (botão e exibição segura do texto).
+
 ## O que já tem
 
 - **Estatísticas (📊)**: gêneros favoritos, décadas, horas de filme, notas comparadas com a média do mundo,

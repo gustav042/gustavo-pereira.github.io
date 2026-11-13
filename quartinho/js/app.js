@@ -28,7 +28,7 @@
     { icone: '🖌️', nome: 'Decorador', desc: 'Decorou o próprio quarto', ok: p => !!p.decorou },
     { icone: '🐾', nome: 'Melhor amigo', desc: 'Tem um bichinho no quarto', ok: p => !!(p.pet && PETS[p.pet.tipo]) },
     { icone: '⏳', nome: 'Viajante do tempo', desc: 'Filmes de 5 décadas diferentes', ok: p => new Set(p.assistidos.filter(f => Number(f.ano)).map(f => Math.floor(f.ano / 10))).size >= 5 },
-    { icone: '🌍', nome: 'Poliglota', desc: 'Filmes de 5 países diferentes', ok: p => new Set(p.assistidos.flatMap(f => (window.Filmes.metaDe(f) || {}).pais || [])).size >= 5 },
+    { icone: '🌍', nome: 'Poliglota', desc: 'Filmes de 5 países diferentes', ok: p => new Set(p.assistidos.flatMap(f => ((window.Filmes.metaDe(f) || {}).pais || []).slice(0, 1))).size >= 5 },
     { icone: '✨', nome: 'Estiloso', desc: 'Personalizou o próprio blog', ok: p => !!(p.blog && p.blog.personalizou) },
     { icone: '🎨', nome: 'Eclético', desc: 'Viu 8 gêneros diferentes', ok: p => new Set(p.assistidos.flatMap(f => (window.Filmes.metaDe(f) || {}).generos || [])).size >= 8 }
   ];
@@ -646,8 +646,34 @@
         : `<button class="btn98 btn-lateral" data-visitar="eu">🏠 Voltar pro meu quarto</button>`}`;
   }
 
+  // Chamada em destaque no quarto (só para o dono); a análise em si abre numa janela própria.
+  function htmlBannerIa() {
+    if (!ehMeu()) return '';
+    const tem = (perfil().assistidos || []).some(f => Number(f.nota) === 5);
+    return `<div class="banner-ia-icone" aria-hidden="true">✨</div>
+      <div class="banner-ia-texto">
+        <h2>O que seus filmes 5 estrelas dizem sobre você?</h2>
+        ${tem ? '<button class="btn98 banner-ia-botao" type="button" data-analisar-filmes>✨ Analisar com IA</button>'
+          : '<p class="vazio">Dê 5 estrelas a alguns filmes para liberar.</p>'}
+        <small>Os títulos serão enviados ao Google Gemini. É só uma brincadeira.</small>
+      </div>`;
+  }
+  function iniciarAnaliseDosFilmes() {
+    if (!ehMeu() || !Conta.logado()) {
+      avisar('⚠ Entre na sua conta para usar a análise por IA.');
+      return;
+    }
+    abrirAnaliseIa(perfil().assistidos
+      .filter(f => Number(f.nota) === 5)
+      .slice(0, 40)
+      .map(f => ({ titulo: f.titulo, ano: f.ano || '' })));
+  }
+
   function renderTudo() {
     const p = perfil();
+    const bannerIa = document.getElementById('banner-ia');
+    bannerIa.innerHTML = htmlBannerIa();
+    bannerIa.hidden = !ehMeu();
     document.documentElement.style.setProperty('--destaque', corValida(p.corDestaque, '#ff66cc'));
     document.title = `${p.nome} · quartinho.net`;
     renderQuarto();
@@ -1023,6 +1049,30 @@
     `<label class="campo"><span>${rotulo}</span><input type="${tipo}" name="${nome}" value="${esc(valor)}" ${extra}></label>`;
   const opcoes = (obj, atual) => Object.entries(obj).map(([k, v]) => `<option value="${k}" ${k === atual ? 'selected' : ''}>${esc(v)}</option>`).join('');
 
+  // A análise por IA abre numa janela própria, por cima da estante. O estado fica aqui para
+  // sobreviver aos redesenhos da janela. fase: inicio | carregando | pronta | limite | erro.
+  let analiseIa = null;
+  function abrirAnaliseIa(filmes) {
+    analiseIa = { filmes, fase: 'inicio', texto: '', erro: '', restantes: null };
+    abrir('analiseIa');
+  }
+  function pedirAnaliseIa(estado, corpo, redesenhar, senha) {
+    estado.fase = 'carregando';
+    redesenhar();
+    Conta.analisarFilmes(estado.filmes, senha).then(r => {
+      estado.fase = 'pronta'; estado.texto = r.analise; estado.restantes = r.restantes;
+    }).catch(e => {
+      estado.fase = e.codigo === 'limite' || e.codigo === 'senha' ? 'limite' : 'erro';
+      estado.erro = e.message;
+    }).finally(() => {
+      if (analiseIa === estado && corpo.isConnected) redesenhar();
+    });
+  }
+  // Texto da IA com **negrito** e *itálico* simples, já escapado contra HTML.
+  const formatarAnalise = texto => esc(texto)
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/\*(.+?)\*/g, '<i>$1</i>');
+
   const JANELAS = {
     estante: {
       titulo: '📀 Estante de DVDs', largura: 480,
@@ -1040,14 +1090,22 @@
             </fieldset>
           </form>` : ''}
           <p>${p.assistidos.length} filme(s) na estante</p>
-          ${p.assistidos.length ? `<ul class="lista-filmes">${p.assistidos.map((f, i) => `
-            <li><span class="lombada" style="background:${corDe(f.titulo)}"></span>
+          ${p.assistidos.length ? `<div class="form98 filtro-estante">
+            <label class="campo"><span>Filtrar por nota</span>
+              <select id="filtro-nota" aria-label="Filtrar filmes por nota">
+                <option value="todas">Todas as notas</option>
+                ${Array.from({ length: 10 }, (_, i) => 5 - i * 0.5).map(n => `<option value="${n}">${String(n).replace('.', ',')} ★</option>`).join('')}
+                <option value="sem-nota">Sem nota</option>
+              </select>
+            </label>
+          </div><ul class="lista-filmes">${p.assistidos.map((f, i) => `
+            <li data-nota="${f.nota == null || f.nota === '' ? '' : Number(f.nota)}"><span class="lombada" style="background:${corDe(f.titulo)}"></span>
               <span><b>${esc(f.titulo)}</b> <small>${f.ano ? '(' + esc(f.ano) + ')' : ''} ${fmtData(f.data)}</small>
                 ${(() => { const m = window.Filmes.metaDe(f); return m && m.generos.length ? `<br><small class="generos">${m.generos.slice(0, 3).map(esc).join(' · ')}</small>` : ''; })()}
                 ${f.comentario ? `<span class="comentario-estante">“${esc(f.comentario)}”</span>` : ''}</span>
               <span class="estrelas" title="${f.nota} de 5">${estrelas(f.nota)}</span>
               ${ehMeu() ? `<button class="btn98 mini" data-tirar="${i}" aria-label="Tirar ${esc(f.titulo)} da estante">x</button>` : ''}
-            </li>`).join('')}</ul>` : '<p class="vazio">estante vazia... bora assistir algo!</p>'}
+            </li>`).join('')}</ul><p class="vazio" data-filtro-vazio hidden>Nenhum filme com essa nota.</p>` : '<p class="vazio">estante vazia... bora assistir algo!</p>'}
           ${ehMeu() ? `<form class="form98" id="f-letterboxd">
             <fieldset><legend>Importar avaliações do Letterboxd</legend>
               <p><small>Escolha o CSV de avaliações ou cole seu conteúdo. A data importada é a data do arquivo, não necessariamente a data em que você assistiu.</small></p>
@@ -1125,6 +1183,18 @@
           corpo.querySelector('input[name=titulo]').focus();
         };
         corpo.oninput = corpo.onchange = e => {
+          if (e.target.id === 'filtro-nota') {
+            const nota = e.target.value;
+            const itens = corpo.querySelectorAll('.lista-filmes li');
+            let visiveis = 0;
+            itens.forEach(item => {
+              const corresponde = nota === 'todas' || (nota === 'sem-nota' ? item.dataset.nota === '' : item.dataset.nota === nota);
+              item.hidden = !corresponde;
+              if (corresponde) visiveis++;
+            });
+            corpo.querySelector('[data-filtro-vazio]').hidden = visiveis > 0;
+            return;
+          }
           if (!e.target.closest('#f-letterboxd')) return;
           pedidoImportacao++;
           importacao = null;
@@ -1170,6 +1240,41 @@
           </article>`;
         }).join('')}</div>
         ${ehMeu() ? '<p><small>Troque os pôsteres em “Decorar e mudar a vibe”.</small></p>' : ''}`;
+      }
+    },
+
+    analiseIa: {
+      titulo: '✨ Análise dos seus filmes', largura: 540,
+      html() {
+        const e = analiseIa;
+        if (!e) return '';
+        if (e.fase === 'carregando' || e.fase === 'inicio') return '<p role="status">A IA está pensando nos seus filmes...</p>';
+        if (e.fase === 'pronta') {
+          return `<div class="analise-filmes-texto">${formatarAnalise(e.texto)}</div>
+            <p><small>${e.restantes == null ? 'Uso liberado por senha.' : `Restam ${e.restantes} análise(s) nas próximas 24 horas.`}
+            Uma interpretação divertida, não uma definição de quem você é.</small></p>`;
+        }
+        if (e.fase === 'limite') {
+          return `<p role="alert">⚠ ${esc(e.erro)}</p>
+            <form class="form98" data-liberar-analise>
+              <label class="campo"><span>Senha de liberação</span><input type="password" name="senha" maxlength="200" autocomplete="off" required></label>
+              <button class="btn98" type="submit">Liberar e analisar</button>
+            </form>`;
+        }
+        return `<p role="alert">⚠ ${esc(e.erro)}</p><button class="btn98" type="button" data-tentar-analise>Tentar de novo</button>`;
+      },
+      bind(corpo, redesenhar) {
+        const e = analiseIa;
+        if (!e) return;
+        corpo.onsubmit = ev => {
+          ev.preventDefault();
+          if (!ev.target.closest('[data-liberar-analise]')) return;
+          pedirAnaliseIa(e, corpo, redesenhar, String(new FormData(ev.target).get('senha') || ''));
+        };
+        corpo.onclick = ev => {
+          if (ev.target.closest('[data-tentar-analise]')) pedirAnaliseIa(e, corpo, redesenhar);
+        };
+        if (e.fase === 'inicio') pedirAnaliseIa(e, corpo, redesenhar);
       }
     },
 
@@ -1868,6 +1973,7 @@
       salvarPosicoesCartoes({});
       return;
     }
+    if (e.target.closest('[data-analisar-filmes]')) { iniciarAnaliseDosFilmes(); return; }
     if (e.target.closest('#pet') && !modoEdicao) { carinho(); return; }
     const visita = e.target.closest('[data-visitar]');
     if (visita) { location.hash = linkQuarto(visita.dataset.visitar); return; }

@@ -1,0 +1,4 @@
+project_id = "quartinho"
+
+[functions.analisar-filmes]
+verify_jwt = true

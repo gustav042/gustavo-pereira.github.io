@@ -212,6 +212,28 @@ window.Conta = (function () {
     if (data && data.user && sessao) sessao.user = data.user;
   }
 
+  // A chave do Gemini fica na Edge Function; o navegador envia apenas os filmes escolhidos.
+  // Devolve { analise, restantes }. Erros do servidor chegam com .codigo ('limite' ou 'senha').
+  async function analisarFilmes(filmes, senha) {
+    if (!configurado || !sb) throw new Error('A análise por IA precisa de uma conta Supabase configurada.');
+    if (!logado()) throw new Error('Entre na sua conta para usar a análise por IA.');
+    const { data, error } = await sb.functions.invoke('analisar-filmes', { body: { filmes, senha: senha || undefined } });
+    if (error) {
+      let resposta = null;
+      if (error.context && typeof error.context.clone === 'function') {
+        try { resposta = await error.context.clone().json(); } catch (e) { /* sem corpo JSON */ }
+      }
+      if (resposta && typeof resposta.error === 'string') {
+        throw Object.assign(new Error(resposta.error), { codigo: resposta.codigo });
+      }
+      throw erro(error);
+    }
+    if (!data || typeof data.analise !== 'string' || !data.analise.trim()) {
+      throw new Error('A IA não retornou uma análise. Tente de novo.');
+    }
+    return { analise: data.analise.trim(), restantes: typeof data.restantes === 'number' ? data.restantes : null };
+  }
+
   // ---------- imagens ----------
   // Recebe uma imagem em "data URL" (o que o site gera ao reduzir a foto) e devolve o link público.
   async function enviarImagem(dataUrl) {
@@ -233,6 +255,6 @@ window.Conta = (function () {
     carregarRede, carregarPerfil, carregarSeguidores, buscarPessoas, sugestoes, registrarVisita, seguir, deixarDeSeguir, novidades,
     comentariosDe, enviarComentario, editarComentario, apagarComentario,
     enviarRecado, apagarRecado, enviarImagem, preferencia, guardarPreferencia,
-    USUARIO_OK
+    analisarFilmes, USUARIO_OK
   };
 })();

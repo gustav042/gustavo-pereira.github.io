@@ -1,2 +1,6 @@
 # sprites de terceiros (a licença não permite redistribuir)
 assets/
+
+node_modules/
+supabase/.temp/
+supabase/.branches/
