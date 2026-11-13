@@ -51,8 +51,8 @@ Observação: no plano grátis, o Supabase pausa o projeto depois de uma semana 
 
 ## Análise dos filmes com IA (Google Gemini)
 
-No seu quarto, entre na sua conta e clique no destaque **Analisar meus filmes 5 estrelas**.
-O site envia ao Google Gemini apenas os títulos e anos desses filmes; a análise abre numa janela própria por cima da estante e não é
+No seu quarto, entre na sua conta e clique no destaque **Analisar com IA**.
+O site envia ao Google Gemini apenas título, ano e nota dos 20 filmes mais bem avaliados e dos 20 pior avaliados; a análise abre numa janela própria por cima da estante e não é
 salva no perfil. Use o botão só se estiver de acordo com esse envio. A IA oferece uma leitura
 interpretativa dos seus gostos, não uma avaliação psicológica. O plano gratuito da API tem limites
 de uso e, nele, o Google pode usar os dados enviados para melhorar seus produtos.

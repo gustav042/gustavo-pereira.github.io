@@ -61,8 +61,12 @@ window.Stats = (function () {
       semInfo: itens.length - com.length,
       series: com.length - filmes.length,
       generos: generos.map(([g, n]) => ({ nome: g, n, pct: Math.round(n / totalGeneros * 100) })),
-      generosNotas: [...notasPorGenero].map(([nome, notas]) => ({ nome, media: media(notas), n: notas.length }))
-        .sort((a, b) => b.media - a.media || b.n - a.n || a.nome.localeCompare(b.nome)).slice(0, 3),
+      generosNotas: (lista => {
+        // Gêneros com poucos títulos distorcem a média; só entram se faltar gênero com amostra maior.
+        const minimo = lista.filter(g => g.n >= 3);
+        return (minimo.length >= 3 ? minimo : lista)
+          .sort((a, b) => b.media - a.media || b.n - a.n || a.nome.localeCompare(b.nome)).slice(0, 3);
+      })([...notasPorGenero].map(([nome, notas]) => ({ nome, media: media(notas), n: notas.length }))),
       decadas: decadas.map(([d, n]) => ({
         nome: d + 's', n,
         filmes: itens.filter(x => Number(x.f.ano) && Math.floor(Number(x.f.ano) / 10) * 10 === Number(d))
@@ -221,7 +225,7 @@ window.Stats = (function () {
       { id: 'atores', html: janela('🌟 atores que mais aparecem', r.atores.length ? `<ol class="lista-top">${r.atores.map(([a, n]) => `<li>${esc(a)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
       { id: 'compat', html: janela(ehEu ? '🤝 compatibilidade com os amigos' : `🤝 compatibilidade de ${esc(p.nome)}`, compatHtml, 'largo') },
       { id: 'generos-notas', html: janela('⭐ gêneros mais bem avaliados', r.generosNotas.length
-        ? `<ol class="lista-top">${r.generosNotas.map(g => `<li>${esc(g.nome)} — <b>${g.media.toFixed(2).replace('.', ',')} / 5</b> <small>(${g.n} título${g.n === 1 ? '' : 's'})</small></li>`).join('')}</ol><p><small>Média das notas dadas aos títulos de cada gênero.</small></p>`
+        ? `<ol class="lista-top">${r.generosNotas.map(g => `<li>${esc(g.nome)} — <b>${g.media.toFixed(2).replace('.', ',')} / 5</b> <small>(${g.n} título${g.n === 1 ? '' : 's'})</small></li>`).join('')}</ol><p><small>Média das notas dadas aos títulos de cada gênero; só entram gêneros com 3 ou mais títulos (quando há o bastante).</small></p>`
         : '<p class="vazio">sem títulos avaliados com gênero</p>') }
     ];
   }

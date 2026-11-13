@@ -228,11 +228,11 @@ test('janela da análise pede senha ao atingir o limite e mostra o texto escapad
 
 function carregarBanner(extra) {
   const app = ler('app.js');
-  const ini = app.indexOf('  function htmlBannerIa()');
+  const ini = app.indexOf('  function filmesParaAnalise()');
   const fim = app.indexOf('  function renderTudo()');
   const ctx = Object.assign({ esc: String }, extra);
   vm.createContext(ctx);
-  vm.runInContext(app.slice(ini, fim) + ';this.htmlBannerIa = htmlBannerIa; this.iniciar = iniciarAnaliseDosFilmes;', ctx);
+  vm.runInContext(app.slice(ini, fim) + ';this.htmlBannerIa = htmlBannerIa; this.selecao = filmesParaAnalise; this.iniciar = iniciarAnaliseDosFilmes;', ctx);
   return ctx;
 }
 
@@ -241,28 +241,29 @@ test('chamada da análise por IA fica fora da estante e só aparece no próprio 
   const estante = app.slice(app.indexOf('    estante: {'), app.indexOf('    posteres: {'));
   assert.doesNotMatch(estante, /data-analisar-filmes/);
   let dono = true;
-  const ctx = carregarBanner({ perfil: () => ({ assistidos: [{ titulo: 'F', nota: 5 }] }), ehMeu: () => dono });
+  const ctx = carregarBanner({ perfil: () => ({ assistidos: [1, 2, 3].map(n => ({ titulo: 'F' + n, nota: n })) }), ehMeu: () => dono });
   assert.match(ctx.htmlBannerIa(), /data-analisar-filmes/);
-  assert.match(ctx.htmlBannerIa(), /serão enviados ao Google Gemini/);
+  assert.match(ctx.htmlBannerIa(), /Google Gemini/);
   dono = false;
   assert.equal(ctx.htmlBannerIa(), '');
 });
 
-test('ação da análise envia apenas títulos avaliados com cinco estrelas', () => {
+test('análise envia os 20 filmes de maior e os 20 de menor nota, sem repetir', () => {
   let enviados;
+  const assistidos = Array.from({ length: 60 }, (_, i) => ({ titulo: 'F' + i, ano: 2000, nota: ((i % 10) + 1) / 2 }));
+  assistidos.push({ titulo: 'Sem nota', ano: 1999 });
   const ctx = carregarBanner({
-    perfil: () => ({ assistidos: [
-      { titulo: 'Cinco estrelas', ano: 2001, nota: 5 },
-      { titulo: 'Quatro estrelas', ano: 2002, nota: 4 },
-      { titulo: 'Sem ano', nota: 5 }
-    ] }),
-    ehMeu: () => true, avisar() {},
+    perfil: () => ({ assistidos }), ehMeu: () => true, avisar() {},
     abrirAnaliseIa: filmes => { enviados = filmes; },
     Conta: { logado: () => true }
   });
   ctx.iniciar();
-  assert.deepEqual(JSON.parse(JSON.stringify(enviados)), [
-    { titulo: 'Cinco estrelas', ano: 2001 },
-    { titulo: 'Sem ano', ano: '' }
-  ]);
+  const lista = JSON.parse(JSON.stringify(enviados));
+  assert.equal(lista.length, 40);
+  assert.equal(new Set(lista.map(x => x.titulo)).size, 40);
+  assert.ok(lista.slice(0, 20).every(x => x.nota >= 3.5));
+  assert.ok(lista.slice(20).every(x => x.nota <= 2));
+  assert.ok(!lista.some(x => x.titulo === 'Sem nota'));
+  const curta = carregarBanner({ perfil: () => ({ assistidos: assistidos.slice(0, 5) }), ehMeu: () => true });
+  assert.equal(curta.selecao().length, 5);
 });

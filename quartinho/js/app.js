@@ -647,15 +647,23 @@
   }
 
   // Chamada em destaque no quarto (só para o dono); a análise em si abre numa janela própria.
+  // Até 20 filmes de maior nota e 20 de menor nota (sem repetir, se a lista for curta).
+  function filmesParaAnalise() {
+    const avaliados = (perfil().assistidos || []).filter(f => Number(f.nota) >= 0.5);
+    const ordenados = [...avaliados].sort((a, b) => Number(b.nota) - Number(a.nota));
+    const melhores = ordenados.slice(0, 20);
+    const piores = ordenados.slice(20).slice(-20);
+    return [...melhores, ...piores].map(f => ({ titulo: f.titulo, ano: f.ano || '', nota: Number(f.nota) }));
+  }
   function htmlBannerIa() {
     if (!ehMeu()) return '';
-    const tem = (perfil().assistidos || []).some(f => Number(f.nota) === 5);
+    const tem = filmesParaAnalise().length >= 3;
     return `<div class="banner-ia-icone" aria-hidden="true">✨</div>
       <div class="banner-ia-texto">
-        <h2>O que seus filmes 5 estrelas dizem sobre você?</h2>
+        <h2>O que suas notas dizem sobre você?</h2>
         ${tem ? '<button class="btn98 banner-ia-botao" type="button" data-analisar-filmes>✨ Analisar com IA</button>'
-          : '<p class="vazio">Dê 5 estrelas a alguns filmes para liberar.</p>'}
-        <small>Os títulos serão enviados ao Google Gemini. É só uma brincadeira.</small>
+          : '<p class="vazio">Dê nota a pelo menos 3 filmes para liberar.</p>'}
+        <small>Seus 20 filmes mais bem e 20 pior avaliados vão ao Google Gemini. É só uma brincadeira.</small>
       </div>`;
   }
   function iniciarAnaliseDosFilmes() {
@@ -663,10 +671,7 @@
       avisar('⚠ Entre na sua conta para usar a análise por IA.');
       return;
     }
-    abrirAnaliseIa(perfil().assistidos
-      .filter(f => Number(f.nota) === 5)
-      .slice(0, 40)
-      .map(f => ({ titulo: f.titulo, ano: f.ano || '' })));
+    abrirAnaliseIa(filmesParaAnalise());
   }
 
   function renderTudo() {
