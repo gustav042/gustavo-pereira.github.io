@@ -103,7 +103,7 @@ window.Filmes = (function () {
 
   async function detalhes(item) {
     const k = item.tipo + ':' + item.id;
-    if (cache[k] && cache[k].meta && Object.prototype.hasOwnProperty.call(cache[k].meta, 'sinopse')) return cache[k];
+    if (cache[k] && cache[k].meta && Object.prototype.hasOwnProperty.call(cache[k].meta, 'sinopse') && cache[k].meta.origem) return cache[k];
     const filme = item.tipo === 'filme';
     const d = await chamar(filme ? `/movie/${item.id}` : `/tv/${item.id}`, { append_to_response: 'credits' });
     const creditos = d.credits || {};
@@ -115,10 +115,12 @@ window.Filmes = (function () {
         ? (creditos.crew || []).filter(c => c.job === 'Director').map(c => c.name).join(' e ')
         : (d.created_by || []).map(c => c.name).join(' e '),
       elenco: (creditos.cast || []).slice(0, 5).map(c => c.name),
-      pais: filme ? (d.production_countries || []).map(p => p.iso_3166_1) : (d.origin_country || []),
+      // o primeiro é o país de origem; os demais são coproduções
+      pais: [...new Set([...(d.origin_country || []), ...(filme ? (d.production_countries || []).map(p => p.iso_3166_1) : [])])],
       nota: Math.round((d.vote_average || 0) * 10) / 10,
       poster: d.poster_path ? IMG + d.poster_path : '',
       sinopse: d.overview || '',
+      origem: 1, // marca que `pais` já vem com o país de origem primeiro
       temporadas: filme ? null : (d.seasons || []).filter(s => s.season_number > 0).map(s => ({ n: s.season_number, episodios: s.episode_count }))
     };
     const res = { titulo: d.title || d.name, ano: String(d.release_date || d.first_air_date || '').slice(0, 4), meta };

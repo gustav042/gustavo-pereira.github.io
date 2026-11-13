@@ -73,7 +73,8 @@ window.Stats = (function () {
       exigencia: comNotaTmdb.length ? { minha: minhaMedia, mundo: mediaMundo, diferenca: minhaMedia - mediaMundo, base: comNotaTmdb.length } : null,
       diretores: contar(com.flatMap(x => x.m.diretor ? [x.m.diretor] : [])).slice(0, 10),
       atores: contar(com.flatMap(x => x.m.elenco || [])).filter(([, n]) => n > 1).slice(0, 5),
-      paises: contar(com.flatMap(x => x.m.pais || [])),
+      paises: contar(com.flatMap(x => (x.m.pais || []).slice(0, 1))).map(([iso, n]) => [iso, n,
+        com.filter(x => (x.m.pais || [])[0] === iso).map(x => x.f.titulo)]),
       notas: [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5]
         .map(n => ({ n, qtd: itens.filter(x => x.f.nota === n).length }))
     };
@@ -216,7 +217,7 @@ window.Stats = (function () {
       { id: 'exigencia', html: janela('🍅 exigente ou pega leve?', exigencia) },
       { id: 'notas', html: janela('⭐ como ' + voce + ' dá notas', barrasNotas(r.notas)) },
       { id: 'diretores', html: janela('🎬 diretores mais vistos', r.diretores.length ? `<ol class="lista-top">${r.diretores.map(([d, n]) => `<li>${esc(d)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
-      { id: 'paises', html: janela('🌍 volta ao mundo', r.paises.length ? `<ul class="paises">${r.paises.slice(0, 7).map(([iso, n]) => `<li>${bandeira(iso)} ${esc(nomePais(iso))} <small>(${n})</small></li>`).join('')}</ul>` : '<p class="vazio">sem dados ainda</p>') },
+      { id: 'paises', html: janela('🌍 volta ao mundo', r.paises.length ? `<ul class="paises">${r.paises.slice(0, 10).map(([iso, n, titulos]) => `<li tabindex="0" title="${esc(titulos.join('\n'))}">${bandeira(iso)} ${esc(nomePais(iso))} <small>(${n})</small></li>`).join('')}</ul>` : '<p class="vazio">sem dados ainda</p>') },
       { id: 'atores', html: janela('🌟 atores que mais aparecem', r.atores.length ? `<ol class="lista-top">${r.atores.map(([a, n]) => `<li>${esc(a)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
       { id: 'compat', html: janela(ehEu ? '🤝 compatibilidade com os amigos' : `🤝 compatibilidade de ${esc(p.nome)}`, compatHtml, 'largo') },
       { id: 'generos-notas', html: janela('⭐ gêneros mais bem avaliados', r.generosNotas.length

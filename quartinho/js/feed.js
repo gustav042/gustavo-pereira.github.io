@@ -195,6 +195,7 @@ window.Feed = (function () {
       <form class="form98 status-form" id="f-status">
         <div class="linha">
           <label class="campo"><span>Título (digite pra buscar)</span><input type="text" name="titulo" maxlength="60" required value="${esc(a.titulo || '')}" placeholder="ex.: lost"></label>
+          <label class="campo curto"><span>Ano</span><input type="number" name="ano" min="1888" max="2100" value="${esc(a.ano || '')}" placeholder="ex.: 2004"></label>
           <label class="campo"><span>Episódio/detalhe</span><input type="text" name="detalhe" maxlength="60" value="${esc(a.detalhe || '')}" placeholder="ex.: T1 · E06"></label>
         </div>
         <div class="linha seletor-episodio" hidden></div>
@@ -261,6 +262,7 @@ window.Feed = (function () {
     window.Busca.anexar(form.elements.titulo, {
       aoEscolher(det) {
         escolhaStatus = det;
+        form.elements.ano.value = det.ano || '';
         const temps = det.meta && det.meta.temporadas;
         if (!temps || !temps.length) { form.elements.detalhe.value = ''; }
         window.Busca.seletorEpisodio(seletor, temps, null, porDetalhe);
@@ -344,6 +346,49 @@ window.Feed = (function () {
       </div>`;
     window.U.prepararNotas(raiz);
     prepararStatus();
+    preencherAnosFaltando();
+  }
+
+  // Posts sem ano, sem dados do TMDB ou sem o país de origem (inclui os importados do Letterboxd): busca de novo no TMDB
+  // (pelo id guardado, ou por título + ano exatos, só se houver um único resultado).
+  // Os seus são salvos; os dos amigos só são completados na tela (cada um só pode gravar o próprio perfil).
+  const anoTentado = new Set();
+  const buscasPorTitulo = new Map();
+  const precisaAtualizar = f => !f.ano || (f.meta ? !!(f.meta.id && f.meta.tipo && !f.meta.origem) : !f.tmdbTentado);
+  async function acharNoTmdb(F, f) {
+    const n = F.norm(f.titulo);
+    if (!buscasPorTitulo.has(n)) buscasPorTitulo.set(n, F.buscar(f.titulo, 'tudo'));
+    const exatos = (await buscasPorTitulo.get(n)).filter(x => x.ano &&
+      [x.titulo, x.original].some(nome => F.norm(nome) === n) && (!f.ano || Number(x.ano) === Number(f.ano)));
+    return exatos.length === 1 ? F.detalhes(exatos[0]) : null;
+  }
+  async function preencherAnosFaltando() {
+    const F = window.Filmes;
+    if (!F.temChave()) return;
+    const pendentes = [];
+    for (const p of Object.values(Q().perfis())) {
+      if (p.soVisita) continue;
+      for (const f of p.assistidos || []) if (precisaAtualizar(f) && !anoTentado.has(f)) pendentes.push({ f, meu: p.id === 'eu' });
+    }
+    if (!pendentes.length) return;
+    pendentes.forEach(x => anoTentado.add(x.f));
+    let mudou = false, mudouMeu = false;
+    const alterou = meu => { mudou = true; if (meu) mudouMeu = true; };
+    for (const { f, meu } of pendentes) {
+      try {
+        const det = f.meta && f.meta.id && f.meta.tipo
+          ? await F.detalhes({ id: f.meta.id, tipo: f.meta.tipo })
+          : f.meta ? null : await acharNoTmdb(F, f);
+        if (det && det.meta && !(f.meta && f.meta.origem)) { f.meta = det.meta; alterou(meu); }
+        if (det && !f.ano && Number(det.ano)) { f.ano = Number(det.ano); alterou(meu); }
+        if (!det && !f.meta && meu) { f.tmdbTentado = true; alterou(meu); }
+      } catch (e) { /* sem conexão ou limite de buscas: tenta de novo na próxima visita */ anoTentado.delete(f); }
+    }
+    if (mudouMeu) Q().salvar();
+    if (mudou) {
+      const form = document.getElementById('f-status');
+      if (form && !form.contains(document.activeElement)) render();
+    }
   }
 
   // ---------- ações ----------
@@ -476,7 +521,7 @@ window.Feed = (function () {
     // informações do filme/série: da busca, ou do que já estava na TV
     const anterior = p.assistindo && p.assistindo.titulo === titulo ? p.assistindo : null;
     const meta = escolhaStatus && escolhaStatus.titulo === titulo ? escolhaStatus.meta : (anterior && anterior.meta) || null;
-    const ano = escolhaStatus && escolhaStatus.titulo === titulo ? escolhaStatus.ano : '';
+    const ano = String(fd.get('ano') || '').trim() || (escolhaStatus && escolhaStatus.titulo === titulo ? escolhaStatus.ano : '') || (anterior && anterior.ano) || '';
     if (acao === 'terminei') {
       const novo = { id: window.U.novoId(), titulo, ano: Number(ano) || '', nota: Number(fd.get('nota')) || 3, data: hoje(), quando: new Date().toISOString() };
       if (comentario) novo.comentario = comentario;
@@ -485,6 +530,7 @@ window.Feed = (function () {
       if (anterior) p.assistindo = { titulo: '', detalhe: '', progresso: 0 };
     } else {
       p.assistindo = { titulo, detalhe, progresso: anterior ? anterior.progresso : 0 };
+      if (Number(ano)) p.assistindo.ano = Number(ano);
       if (comentario) p.assistindo.comentario = comentario; // vale pro episódio atual
       if (meta) p.assistindo.meta = meta;
       // série: o progresso sai da temporada/episódio escolhidos
