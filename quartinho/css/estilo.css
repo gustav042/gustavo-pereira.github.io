@@ -290,11 +290,15 @@ legend { padding: 0 4px; }
 .barra98 > div { height: 100%; background: repeating-linear-gradient(90deg, #000080 0 8px, transparent 8px 10px); }
 
 /* estante */
-.lista-filmes { list-style: none; padding: 0; margin: 0 0 10px; background: #fff; border: 2px solid; border-color: #808080 #fff #fff #808080; }
-.lista-filmes li { display: flex; align-items: center; gap: 8px; padding: 3px 6px; border-bottom: 1px dotted #aaa; }
-.lista-filmes li:last-child { border-bottom: 0; }
-.lombada { width: 7px; height: 20px; flex: none; border: 1px solid #000; }
-.estrelas { color: #b07800; margin-left: auto; white-space: nowrap; }
+.lista-filmes { list-style: none; padding: 6px; margin: 0 0 10px; background: #fff; border: 2px solid; border-color: #808080 #fff #fff #808080; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.lista-filmes li { min-width: 0; padding: 5px; border: 1px dotted #aaa; background: #f5f5f5; }
+.capa-estante { aspect-ratio: 2 / 3; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; color: #fff; text-align: center; font-family: var(--pixel); font-size: 15px; line-height: 1.25; text-shadow: 1px 1px #000; }
+.capa-estante img { width: 100%; height: 100%; object-fit: cover; }
+.capa-estante span { padding: 5px; overflow-wrap: anywhere; }
+.info-estante { min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 15px; overflow-wrap: anywhere; }
+.info-estante > small { color: #555; }
+.acoes-estante { display: flex; align-items: center; justify-content: space-between; gap: 3px; margin-top: 3px; }
+.estrelas { color: #b07800; white-space: nowrap; font-size: 14px; }
 .estrela { display: inline-block; line-height: 1; }
 .estrela-vazia { color: #b8b8b8; }
 .estrela-metade {
@@ -303,7 +307,7 @@ legend { padding: 0 4px; }
   background-clip: text;
   -webkit-background-clip: text;
 }
-.lista-filmes small { color: #555; }
+.lista-filmes small { color: #555; font-size: 13px; }
 .banner-ia {
   display: flex; align-items: center; gap: 14px; margin: 0 0 12px; padding: 12px 16px;
   color: #fff; border: 3px solid #000; box-shadow: 4px 4px 0 var(--destaque);

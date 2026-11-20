@@ -60,7 +60,8 @@ window.Stats = (function () {
       total: itens.length,
       semInfo: itens.length - com.length,
       series: com.length - filmes.length,
-      generos: generos.map(([g, n]) => ({ nome: g, n, pct: Math.round(n / totalGeneros * 100) })),
+      generos: generos.map(([g, n]) => ({ nome: g, n, pct: Math.round(n / totalGeneros * 100),
+        titulos: com.filter(x => x.m.generos.includes(g)).map(x => x.f.titulo) })),
       generosNotas: (lista => {
         // Gêneros com poucos títulos distorcem a média; só entram se faltar gênero com amostra maior.
         const minimo = lista.filter(g => g.n >= 3);
@@ -75,7 +76,8 @@ window.Stats = (function () {
       minutos,
       mediaNotas: media(itens.map(x => x.f.nota)),
       exigencia: comNotaTmdb.length ? { minha: minhaMedia, mundo: mediaMundo, diferenca: minhaMedia - mediaMundo, base: comNotaTmdb.length } : null,
-      diretores: contar(com.flatMap(x => x.m.diretor ? [x.m.diretor] : [])).slice(0, 10),
+      diretores: contar(com.flatMap(x => x.m.diretor ? [x.m.diretor] : [])).slice(0, 10)
+        .map(([diretor, n]) => [diretor, n, com.filter(x => x.m.diretor === diretor).map(x => x.f.titulo)]),
       atores: contar(com.flatMap(x => x.m.elenco || [])).filter(([, n]) => n > 1).slice(0, 5),
       paises: contar(com.flatMap(x => (x.m.pais || []).slice(0, 1))).map(([iso, n]) => [iso, n,
         com.filter(x => (x.m.pais || [])[0] === iso).map(x => x.f.titulo)]),
@@ -113,7 +115,7 @@ window.Stats = (function () {
     if (!itens.length) return '<p class="vazio">sem dados ainda</p>';
     const max = Math.max(...itens.map(i => i.n));
     return `<ul class="barras-h">${itens.map((it, k) => `
-      <li><span class="rotulo">${esc(it.nome)}</span>
+      <li tabindex="0" title="${esc(it.titulos.join('\n'))}"><span class="rotulo">${esc(it.nome)}</span>
         <span class="trilho"><span class="barra" style="width:${Math.max(4, it.n / max * 100)}%;--cor:${CORES[k % CORES.length]}"></span></span>
         <span class="valor">${total ? it.pct + '%' : it.n}</span></li>`).join('')}</ul>`;
   }
@@ -216,12 +218,12 @@ window.Stats = (function () {
         <div><dt>nota média</dt><dd class="estrelas-feed" aria-label="nota média ${Math.round(r.mediaNotas * 2) / 2} de 5">${estrelas(Math.round(r.mediaNotas * 2) / 2)}</dd></div>
         <div><dt>gêneros diferentes</dt><dd>${r.generos.length}</dd></div>
       </dl>${r.semInfo ? `<p><small>${r.semInfo} título(s) sem informações — guarde pela busca pra entrarem nas contas</small></p>` : ''}`) },
-      { id: 'generos', html: janela('🎭 gêneros favoritos', barrasH(r.generos.slice(0, 10), true)) },
+      { id: 'generos', html: janela('🎭 gêneros favoritos', barrasH(r.generos.slice(0, 20), true)) },
       { id: 'decadas', html: janela('📅 por década', barrasV(r.decadas), r.decadas.length > 4 ? 'decadas-largo' : '') },
       { id: 'exigencia', html: janela('🍅 exigente ou pega leve?', exigencia) },
       { id: 'notas', html: janela('⭐ como ' + voce + ' dá notas', barrasNotas(r.notas)) },
-      { id: 'diretores', html: janela('🎬 diretores mais vistos', r.diretores.length ? `<ol class="lista-top">${r.diretores.map(([d, n]) => `<li>${esc(d)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
-      { id: 'paises', html: janela('🌍 volta ao mundo', r.paises.length ? `<ul class="paises">${r.paises.slice(0, 10).map(([iso, n, titulos]) => `<li tabindex="0" title="${esc(titulos.join('\n'))}">${bandeira(iso)} ${esc(nomePais(iso))} <small>(${n})</small></li>`).join('')}</ul>` : '<p class="vazio">sem dados ainda</p>') },
+      { id: 'diretores', html: janela('🎬 diretores mais vistos', r.diretores.length ? `<ol class="lista-top">${r.diretores.map(([d, n, titulos]) => `<li tabindex="0" title="${esc(titulos.join('\n'))}">${esc(d)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
+      { id: 'paises', html: janela('🌍 volta ao mundo', r.paises.length ? `<ul class="paises">${r.paises.slice(0, 20).map(([iso, n, titulos]) => `<li tabindex="0" title="${esc(titulos.join('\n'))}">${bandeira(iso)} ${esc(nomePais(iso))} <small>(${n})</small></li>`).join('')}</ul>` : '<p class="vazio">sem dados ainda</p>') },
       { id: 'atores', html: janela('🌟 atores que mais aparecem', r.atores.length ? `<ol class="lista-top">${r.atores.map(([a, n]) => `<li>${esc(a)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
       { id: 'compat', html: janela(ehEu ? '🤝 compatibilidade com os amigos' : `🤝 compatibilidade de ${esc(p.nome)}`, compatHtml, 'largo') },
       { id: 'generos-notas', html: janela('⭐ gêneros mais bem avaliados', r.generosNotas.length

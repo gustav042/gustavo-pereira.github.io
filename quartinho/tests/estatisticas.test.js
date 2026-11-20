@@ -6,11 +6,11 @@ const vm = require('node:vm');
 
 const ler = nome => fs.readFileSync(path.join(__dirname, '..', 'js', nome), 'utf8');
 
-test('volta ao mundo mostra até dez países com os filmes de cada um, sem limitar o resumo', () => {
-  const paises = ['BR', 'US', 'FR', 'JP', 'KR', 'DE', 'IT', 'CA', 'GB', 'MX', 'AR', 'ES'];
+test('volta ao mundo mostra até vinte países com os filmes de cada um, sem limitar o resumo', () => {
+  const paises = ['BR', 'US', 'FR', 'JP', 'KR', 'DE', 'IT', 'CA', 'GB', 'MX', 'AR', 'ES', 'PT', 'AU', 'NL', 'SE', 'CH', 'NO', 'DK', 'FI', 'IE', 'GR'];
   const p = {
     id: 'eu', nome: 'teste', assistidos: paises.map((pais, i) => ({
-      titulo: 'filme ' + i, ano: 1940 + i * 10, nota: 4,
+      titulo: 'filme ' + i, ano: 1940 + (i % 12) * 10, nota: 4,
       meta: { tipo: 'filme', generos: [], elenco: [], pais: [pais], nota: 0 }
     }))
   };
@@ -25,20 +25,20 @@ test('volta ao mundo mostra até dez países com os filmes de cada um, sem limit
   ctx.raiz = {};
   vm.createContext(ctx);
   vm.runInContext(ler('estatisticas.js'), ctx);
-  assert.equal(ctx.window.Stats.resumo(p).paises.length, 12);
+  assert.equal(ctx.window.Stats.resumo(p).paises.length, 22);
   const quarto = ctx.window.Stats.cartoesDoQuarto('eu');
   const paisesHtml = quarto.match(/<ul class="paises">([\s\S]*?)<\/ul>/)[1];
-  assert.equal((paisesHtml.match(/<li /g) || []).length, 10);
+  assert.equal((paisesHtml.match(/<li /g) || []).length, 20);
   assert.match(paisesHtml, /https:\/\/flagcdn\.com\/w40\/br\.png/);
   assert.match(paisesHtml, /title="filme 0"/);
   assert.match(quarto, /decadas-largo/);
   assert.match(quarto, /--colunas:12/);
   ctx.window.Stats.render('eu');
-  assert.equal((ctx.raiz.innerHTML.match(/<ul class="paises">([\s\S]*?)<\/ul>/)[1].match(/<li /g) || []).length, 10);
+  assert.equal((ctx.raiz.innerHTML.match(/<ul class="paises">([\s\S]*?)<\/ul>/)[1].match(/<li /g) || []).length, 20);
 });
 
-test('rankings exibem dez diretores e gêneros e listam os títulos da década correta', () => {
-  const filmes = Array.from({ length: 12 }, (_, i) => ({
+test('rankings exibem vinte gêneros e até dez diretores e listam os títulos da década correta', () => {
+  const filmes = Array.from({ length: 22 }, (_, i) => ({
     titulo: 'Título ' + i, ano: i < 2 ? 2001 + i : 1990 + i % 10, nota: 4,
     meta: { tipo: 'filme', generos: ['Gênero ' + i], diretor: 'Diretor ' + i, elenco: [], pais: [], nota: 0 }
   }));
@@ -57,13 +57,41 @@ test('rankings exibem dez diretores e gêneros e listam os títulos da década c
   const html = ctx.window.Stats.cartoesDoQuarto('eu');
   const generos = html.match(/data-cartao="stats-generos"[\s\S]*?<\/section>/)[0];
   const diretores = html.match(/data-cartao="stats-diretores"[\s\S]*?<\/section>/)[0];
-  assert.equal((generos.match(/<li>/g) || []).length, 10);
-  assert.equal((diretores.match(/<li>/g) || []).length, 10);
+  assert.equal((generos.match(/<li /g) || []).length, 20);
+  assert.equal((diretores.match(/<li /g) || []).length, 10);
   const decada = ctx.window.Stats.resumo(p).decadas.find(d => d.nome === '2000s');
   assert.equal(decada.n, 2);
   assert.deepEqual(Array.from(decada.filmes, f => f.titulo), ['Título 0', 'Título 1']);
   assert.match(html, /data-decada="2000s"/);
   assert(!html.includes('Sem ano'));
+});
+
+test('gêneros e diretores mostram os títulos correspondentes com caracteres escapados', () => {
+  const filme = (titulo, generos, diretor) => ({ titulo, ano: 2000, nota: 4,
+    meta: { tipo: 'filme', generos, diretor, elenco: [], pais: [], nota: 0 } });
+  const p = { id: 'eu', nome: 'teste', assistidos: [
+    filme('Primeiro "filme"', ['Drama', 'Comédia'], 'Diretora'),
+    filme('Segundo <filme>', ['Drama'], 'Diretora'),
+    filme('Outro', ['Comédia'], 'Outro diretor')
+  ] };
+  const ctx = {
+    window: {
+      U: { esc: s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'), estrelas: () => '', limitar: (v, min, max) => Math.min(max, Math.max(min, v)) },
+      Filmes: { metaDe: f => f.meta, norm: String, temChave: () => true },
+      Quartinho: { perfis: () => ({ eu: p }) }
+    },
+    document: { getElementById: () => ctx.raiz, addEventListener() {} }, raiz: {}
+  };
+  vm.createContext(ctx);
+  vm.runInContext(ler('estatisticas.js'), ctx);
+  for (const html of [ctx.window.Stats.cartoesDoQuarto('eu'), (ctx.window.Stats.render('eu'), ctx.raiz.innerHTML)]) {
+    const generos = html.match(/gêneros favoritos[\s\S]*?<\/section>/)[0];
+    const diretores = html.match(/diretores mais vistos[\s\S]*?<\/section>/)[0];
+    assert.match(generos, /title="Primeiro &quot;filme&quot;\nSegundo &lt;filme>"><span class="rotulo">Drama/);
+    assert.match(generos, /title="Primeiro &quot;filme&quot;\nOutro"><span class="rotulo">Comédia/);
+    assert.match(diretores, /title="Primeiro &quot;filme&quot;\nSegundo &lt;filme>">Diretora/);
+    assert.match(diretores, /title="Outro">Outro diretor/);
+  }
 });
 
 test('gêneros mais bem avaliados usam notas pessoais e respeitam a seleção de cartões', () => {
@@ -151,18 +179,21 @@ test('gráfico abre e fecha a lista por mouse, teclado e toque, escapando títul
 test('formulário para guardar filme aparece antes da lista, apenas no próprio quarto', () => {
   const app = ler('app.js');
   const trecho = app.slice(app.indexOf('    estante: {'), app.indexOf('    posteres: {'));
-  const p = { assistidos: [{ titulo: 'Filme', ano: 2000, data: '2023-01-01', nota: 4 }] };
+  const p = { assistidos: [{ titulo: 'Filme', ano: 2000, data: '2023-01-01', nota: 4, meta: { poster: 'https://example.com/poster.jpg', generos: [] } }] };
   let dono = true;
   const ctx = {
     perfil: () => p, ehMeu: () => dono, esc: String, corDe: () => '#fff', fmtData: String,
     estrelas: () => '', campo: () => '',
-    window: { U: { campoNota: () => '' }, Filmes: { metaDe: () => null } }
+    window: { U: { campoNota: () => '' }, Filmes: { metaDe: f => f.meta } },
+    urlSegura: s => /^https:\/\//.test(s) ? s : ''
   };
   vm.createContext(ctx);
   vm.runInContext('this.estante = ({' + trecho + '}).estante;', ctx);
   const html = ctx.estante.html();
   assert(html.indexOf('id="f-filme"') < html.indexOf('class="lista-filmes"'));
   assert(html.indexOf('class="lista-filmes"') < html.indexOf('id="f-letterboxd"'));
+  assert.match(html, /src="https:\/\/example\.com\/poster\.jpg" alt="Pôster de Filme"/);
+  assert.match(html, /class="capa-estante"/);
   dono = false;
   assert(!ctx.estante.html().includes('id="f-filme"'));
   assert(ctx.estante.html().includes('Filme'));
@@ -181,7 +212,8 @@ test('estante filtra filmes pela nota pessoal, incluindo meia estrela e sem nota
   const ctx = {
     perfil: () => p, ehMeu: () => true, esc: String, corDe: () => '#fff', fmtData: String,
     estrelas: () => '', campo: () => {}, mudou() {},
-    window: { U: { campoNota: () => '' }, Filmes: { metaDe: () => null } }
+    window: { U: { campoNota: () => '' }, Filmes: { metaDe: () => null } },
+    urlSegura: () => ''
   };
   vm.createContext(ctx);
   vm.runInContext('this.estante = ({' + trecho + '}).estante;', ctx);
@@ -204,6 +236,51 @@ test('estante filtra filmes pela nota pessoal, incluindo meia estrela e sem nota
   corpo.onchange({ target: { id: 'filtro-nota', value: 'todas' } });
   assert.deepEqual(itens.map(item => item.hidden), [false, false, false]);
   assert.equal(avisoVazio.hidden, true);
+});
+
+test('estante ordena por nota e ano sem alterar os filmes ou o filtro', () => {
+  const app = ler('app.js');
+  const trecho = app.slice(app.indexOf('    estante: {'), app.indexOf('    posteres: {'));
+  const p = { assistidos: [
+    { titulo: 'A', nota: 4, ano: 2000 }, { titulo: 'B', nota: 2.5, ano: 1990 },
+    { titulo: 'C', nota: 4, ano: 2020 }, { titulo: 'D', nota: null, ano: '' },
+    { titulo: 'E', nota: null, ano: 2000 }
+  ] };
+  const itens = p.assistidos.map((f, i) => ({
+    dataset: { indice: String(i), nota: f.nota == null ? '' : String(f.nota), ano: String(f.ano) }, hidden: false
+  }));
+  const lista = { children: [...itens], append(...novos) { this.children = novos; } };
+  const aviso = { hidden: true };
+  const corpo = {
+    querySelector: seletor => seletor === '.lista-filmes' ? lista : seletor === '[data-filtro-vazio]' ? aviso : null,
+    querySelectorAll: () => lista.children
+  };
+  const ctx = {
+    perfil: () => p, ehMeu: () => false, esc: String, corDe: () => '#fff', fmtData: String,
+    estrelas: () => '', urlSegura: () => '',
+    window: { Filmes: { metaDe: () => null } }
+  };
+  vm.createContext(ctx);
+  vm.runInContext('this.estante = ({' + trecho + '}).estante;', ctx);
+  const html = ctx.estante.html();
+  assert.match(html, /aria-label="Ordenar filmes"/);
+  assert.match(html, /data-indice="0" data-ano="2000" data-nota="4"/);
+  ctx.estante.bind(corpo, () => {});
+  const ordem = valor => corpo.onchange({ target: { id: 'ordem-estante', value: valor } });
+  const indices = () => lista.children.map(item => Number(item.dataset.indice));
+  ordem('nota-desc');
+  assert.deepEqual(indices(), [0, 2, 1, 3, 4]);
+  ordem('nota-asc');
+  assert.deepEqual(indices(), [1, 0, 2, 3, 4]);
+  corpo.onchange({ target: { id: 'filtro-nota', value: '4' } });
+  ordem('ano-desc');
+  assert.deepEqual(indices(), [2, 0, 4, 1, 3]);
+  assert.deepEqual(itens.map(item => item.hidden), [false, true, false, true, true]);
+  ordem('ano-asc');
+  assert.deepEqual(indices(), [1, 0, 4, 2, 3]);
+  ordem('original');
+  assert.deepEqual(indices(), [0, 1, 2, 3, 4]);
+  assert.deepEqual(p.assistidos.map(f => f.titulo), ['A', 'B', 'C', 'D', 'E']);
 });
 
 test('janela da análise pede senha ao atingir o limite e mostra o texto escapado', () => {

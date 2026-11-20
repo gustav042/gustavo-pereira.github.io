@@ -79,8 +79,9 @@ Gemini), `js/conta.js` (invocação autenticada) e `js/app.js` (botão e exibiç
 - **Estatísticas (📊)**: gêneros favoritos, décadas, horas de filme, notas comparadas com a média do mundo,
   diretores, países e compatibilidade com os amigos. Os cartões aparecem no próprio quartinho e nos visitados,
   ao lado e abaixo do quarto; cada pessoa escolhe quais exibir em “Decorar e mudar a vibe”. A compatibilidade
-  aparece apenas no próprio quarto, “Volta ao mundo” mostra os sete países mais frequentes com bandeiras
-  do [Flagpedia](https://flagpedia.net/), e o gráfico por década mostra os títulos ao passar o mouse ou
+  aparece apenas no próprio quarto, “Volta ao mundo” mostra os 20 países mais frequentes com bandeiras
+  do [Flagpedia](https://flagpedia.net/). Gêneros favoritos e diretores mais vistos mostram os títulos ao
+  passar o mouse, e o gráfico por década mostra os títulos ao passar o mouse ou
   selecionar uma década. O gráfico se ajusta ao conteúdo (com rolagem horizontal quando necessário).
   “Gêneros mais bem avaliados” mostra as três maiores médias das notas pessoais (de 0,5 a 5),
   com a quantidade de títulos em cada gênero; empates são ordenados pela quantidade e depois pelo nome.
@@ -109,6 +110,8 @@ Gemini), `js/conta.js` (invocação autenticada) e `js/app.js` (botão e exibiç
   TMDB ou título e ano. Sem correspondência exata no TMDB, filmes com nomes diferentes podem não ser
   identificados como duplicados e não entram nas estatísticas que dependem desses dados. A data importada
   é a do CSV de avaliações, que não é necessariamente a data em que o filme foi assistido.
+- **Estante de DVDs**: filtre por nota ou ordene por nota e ano de lançamento, em ordem crescente ou
+  decrescente. Filmes sem nota ou ano ficam no fim da respectiva ordenação.
 - **Arrumar móveis**: arrastar, adicionar do catálogo, trocar modelo (3 de cama, tapete, assento, armário,
   criado-mudo, luminária e planta), trocar cor/material, girar (camas, tapetes e assentos) e remover.
   Atalhos: setas ajustam a posição, R gira, Delete tira do quarto.

@@ -1080,7 +1080,7 @@
 
   const JANELAS = {
     estante: {
-      titulo: '📀 Estante de DVDs', largura: 480,
+      titulo: '📀 Estante de DVDs', largura: 620,
       html() {
         const p = perfil();
         return `${ehMeu() ? `<form class="form98" id="f-filme">
@@ -1103,14 +1103,32 @@
                 <option value="sem-nota">Sem nota</option>
               </select>
             </label>
-          </div><ul class="lista-filmes">${p.assistidos.map((f, i) => `
-            <li data-nota="${f.nota == null || f.nota === '' ? '' : Number(f.nota)}"><span class="lombada" style="background:${corDe(f.titulo)}"></span>
-              <span><b>${esc(f.titulo)}</b> <small>${f.ano ? '(' + esc(f.ano) + ')' : ''} ${fmtData(f.data)}</small>
-                ${(() => { const m = window.Filmes.metaDe(f); return m && m.generos.length ? `<br><small class="generos">${m.generos.slice(0, 3).map(esc).join(' · ')}</small>` : ''; })()}
-                ${f.comentario ? `<span class="comentario-estante">“${esc(f.comentario)}”</span>` : ''}</span>
-              <span class="estrelas" title="${f.nota} de 5">${estrelas(f.nota)}</span>
-              ${ehMeu() ? `<button class="btn98 mini" data-tirar="${i}" aria-label="Tirar ${esc(f.titulo)} da estante">x</button>` : ''}
-            </li>`).join('')}</ul><p class="vazio" data-filtro-vazio hidden>Nenhum filme com essa nota.</p>` : '<p class="vazio">estante vazia... bora assistir algo!</p>'}
+            <label class="campo"><span>Ordenar por</span>
+              <select id="ordem-estante" aria-label="Ordenar filmes">
+                <option value="original">Ordem original</option>
+                <option value="nota-desc">Nota: maior primeiro</option>
+                <option value="nota-asc">Nota: menor primeiro</option>
+                <option value="ano-desc">Lançamento: mais recente primeiro</option>
+                <option value="ano-asc">Lançamento: mais antigo primeiro</option>
+              </select>
+            </label>
+          </div><ul class="lista-filmes">${p.assistidos.map((f, i) => {
+            const m = window.Filmes.metaDe(f);
+            const poster = urlSegura(m && m.poster);
+            return `<li data-indice="${i}" data-ano="${f.ano == null || f.ano === '' ? '' : Number(f.ano)}" data-nota="${f.nota == null || f.nota === '' ? '' : Number(f.nota)}">
+              <div class="capa-estante" style="background-color:${corDe(f.titulo)}">${poster
+                ? `<img src="${esc(poster)}" alt="Pôster de ${esc(f.titulo)}" loading="lazy" referrerpolicy="no-referrer">`
+                : `<span>${esc(f.titulo)}</span>`}</div>
+              <div class="info-estante"><b>${esc(f.titulo)}</b>
+                <small>${f.ano ? '(' + esc(f.ano) + ')' : ''} ${fmtData(f.data)}</small>
+                ${m && m.generos.length ? `<small class="generos">${m.generos.slice(0, 3).map(esc).join(' · ')}</small>` : ''}
+                ${f.comentario ? `<span class="comentario-estante">“${esc(f.comentario)}”</span>` : ''}
+                <div class="acoes-estante"><span class="estrelas" title="${f.nota} de 5">${estrelas(f.nota)}</span>
+                  ${ehMeu() ? `<button class="btn98 mini" data-tirar="${i}" aria-label="Tirar ${esc(f.titulo)} da estante">x</button>` : ''}
+                </div>
+              </div>
+            </li>`;
+          }).join('')}</ul><p class="vazio" data-filtro-vazio hidden>Nenhum filme com essa nota.</p>` : '<p class="vazio">estante vazia... bora assistir algo!</p>'}
           ${ehMeu() ? `<form class="form98" id="f-letterboxd">
             <fieldset><legend>Importar avaliações do Letterboxd</legend>
               <p><small>Escolha o CSV de avaliações ou cole seu conteúdo. A data importada é a data do arquivo, não necessariamente a data em que você assistiu.</small></p>
@@ -1188,6 +1206,22 @@
           corpo.querySelector('input[name=titulo]').focus();
         };
         corpo.oninput = corpo.onchange = e => {
+          if (e.target.id === 'ordem-estante') {
+            const ordem = e.target.value;
+            const lista = corpo.querySelector('.lista-filmes');
+            const itens = Array.from(lista.children);
+            const [campo, direcao] = ordem.split('-');
+            itens.sort((a, b) => {
+              const original = Number(a.dataset.indice) - Number(b.dataset.indice);
+              if (ordem === 'original') return original;
+              const va = a.dataset[campo], vb = b.dataset[campo];
+              const valido = v => v !== '' && Number.isFinite(Number(v)) && Number(v) > 0;
+              if (!valido(va) || !valido(vb)) return valido(va) ? -1 : valido(vb) ? 1 : original;
+              return (direcao === 'asc' ? Number(va) - Number(vb) : Number(vb) - Number(va)) || original;
+            });
+            lista.append(...itens);
+            return;
+          }
           if (e.target.id === 'filtro-nota') {
             const nota = e.target.value;
             const itens = corpo.querySelectorAll('.lista-filmes li');
