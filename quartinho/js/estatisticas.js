@@ -76,7 +76,7 @@ window.Stats = (function () {
       minutos,
       mediaNotas: media(itens.map(x => x.f.nota)),
       exigencia: comNotaTmdb.length ? { minha: minhaMedia, mundo: mediaMundo, diferenca: minhaMedia - mediaMundo, base: comNotaTmdb.length } : null,
-      diretores: contar(com.flatMap(x => x.m.diretor ? [x.m.diretor] : [])).slice(0, 10)
+      diretores: contar(com.flatMap(x => x.m.diretor ? [x.m.diretor] : [])).slice(0, 20)
         .map(([diretor, n]) => [diretor, n, com.filter(x => x.m.diretor === diretor).map(x => x.f.titulo)]),
       atores: contar(com.flatMap(x => x.m.elenco || [])).filter(([, n]) => n > 1).slice(0, 5),
       paises: contar(com.flatMap(x => (x.m.pais || []).slice(0, 1))).map(([iso, n]) => [iso, n,

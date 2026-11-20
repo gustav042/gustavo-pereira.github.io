@@ -37,7 +37,7 @@ test('volta ao mundo mostra até vinte países com os filmes de cada um, sem lim
   assert.equal((ctx.raiz.innerHTML.match(/<ul class="paises">([\s\S]*?)<\/ul>/)[1].match(/<li /g) || []).length, 20);
 });
 
-test('rankings exibem vinte gêneros e até dez diretores e listam os títulos da década correta', () => {
+test('rankings exibem até vinte gêneros e diretores e listam os títulos da década correta', () => {
   const filmes = Array.from({ length: 22 }, (_, i) => ({
     titulo: 'Título ' + i, ano: i < 2 ? 2001 + i : 1990 + i % 10, nota: 4,
     meta: { tipo: 'filme', generos: ['Gênero ' + i], diretor: 'Diretor ' + i, elenco: [], pais: [], nota: 0 }
@@ -58,7 +58,7 @@ test('rankings exibem vinte gêneros e até dez diretores e listam os títulos d
   const generos = html.match(/data-cartao="stats-generos"[\s\S]*?<\/section>/)[0];
   const diretores = html.match(/data-cartao="stats-diretores"[\s\S]*?<\/section>/)[0];
   assert.equal((generos.match(/<li /g) || []).length, 20);
-  assert.equal((diretores.match(/<li /g) || []).length, 10);
+  assert.equal((diretores.match(/<li /g) || []).length, 20);
   const decada = ctx.window.Stats.resumo(p).decadas.find(d => d.nome === '2000s');
   assert.equal(decada.n, 2);
   assert.deepEqual(Array.from(decada.filmes, f => f.titulo), ['Título 0', 'Título 1']);
