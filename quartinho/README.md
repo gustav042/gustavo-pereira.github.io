@@ -81,7 +81,9 @@ Gemini), `js/conta.js` (invocação autenticada) e `js/app.js` (botão e exibiç
   ao lado e abaixo do quarto; cada pessoa escolhe quais exibir em “Decorar e mudar a vibe”. A compatibilidade
   aparece apenas no próprio quarto, “Volta ao mundo” mostra os 20 países mais frequentes com bandeiras
   do [Flagpedia](https://flagpedia.net/). Gêneros favoritos e diretores mais vistos mostram os títulos ao
-  passar o mouse, e o gráfico por década mostra os títulos ao passar o mouse ou
+  passar o mouse. As listas incluem até 30 diretores e até 30 atores; os atores precisam aparecer em mais de um título.
+  Ambas têm rolagem vertical. “Como dá notas” também mostra a média aritmética das avaliações válidas (de 0,5 a 5).
+  O gráfico por década mostra os títulos ao passar o mouse ou
   selecionar uma década. O gráfico se ajusta ao conteúdo (com rolagem horizontal quando necessário).
   “Gêneros mais bem avaliados” mostra as três maiores médias das notas pessoais (de 0,5 a 5),
   com a quantidade de títulos em cada gênero; empates são ordenados pela quantidade e depois pelo nome.

@@ -827,6 +827,7 @@ small.generos { color: #5a5a8a; }
 .medidor span { display: block; font-size: 15px; }
 .medidor b { font-family: var(--pixel); font-size: 18px; color: #c2185b; }
 .lista-top { margin: 0; padding-left: 24px; }
+.lista-top-rolagem { max-height: 240px; overflow-y: auto; overflow-wrap: anywhere; list-style-position: inside; padding-left: 0; }
 .paises { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; }
 .bandeira { position: relative; display: inline-block; width: 24px; vertical-align: middle; }
 .bandeira img { position: absolute; inset: 0; width: 24px; height: auto; }

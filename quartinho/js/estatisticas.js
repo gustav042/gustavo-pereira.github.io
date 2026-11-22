@@ -37,6 +37,8 @@ window.Stats = (function () {
   // ---------- números de um perfil ----------
   function resumo(p) {
     const itens = (p.assistidos || []).map(f => ({ f, m: meta(f) }));
+    const notasValidas = itens.map(x => x.f.nota)
+      .filter(n => typeof n === 'number' && Number.isFinite(n) && n >= 0.5 && n <= 5);
     const com = itens.filter(x => x.m);
     const filmes = com.filter(x => x.m.tipo !== 'serie');
     const generos = contar(com.flatMap(x => x.m.generos));
@@ -74,11 +76,12 @@ window.Stats = (function () {
           .map(x => ({ titulo: x.f.titulo, ano: x.f.ano }))
       })),
       minutos,
-      mediaNotas: media(itens.map(x => x.f.nota)),
+      mediaNotas: media(notasValidas),
+      totalNotas: notasValidas.length,
       exigencia: comNotaTmdb.length ? { minha: minhaMedia, mundo: mediaMundo, diferenca: minhaMedia - mediaMundo, base: comNotaTmdb.length } : null,
-      diretores: contar(com.flatMap(x => x.m.diretor ? [x.m.diretor] : [])).slice(0, 20)
+      diretores: contar(com.flatMap(x => x.m.diretor ? [x.m.diretor] : [])).slice(0, 30)
         .map(([diretor, n]) => [diretor, n, com.filter(x => x.m.diretor === diretor).map(x => x.f.titulo)]),
-      atores: contar(com.flatMap(x => x.m.elenco || [])).filter(([, n]) => n > 1).slice(0, 5),
+      atores: contar(com.flatMap(x => x.m.elenco || [])).filter(([, n]) => n > 1).slice(0, 30),
       paises: contar(com.flatMap(x => (x.m.pais || []).slice(0, 1))).map(([iso, n]) => [iso, n,
         com.filter(x => (x.m.pais || [])[0] === iso).map(x => x.f.titulo)]),
       notas: [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5]
@@ -177,7 +180,7 @@ window.Stats = (function () {
     const max = Math.max(...itens.map(i => i.qtd));
     return `<ul class="barras-h barras-notas">${itens.map((it, k) => `
       <li><span class="rotulo estrelas-feed" aria-label="nota ${it.n.toLocaleString('pt-BR')} de 5">${estrelas(it.n)}</span>
-        <span class="trilho"><span class="barra" style="width:${Math.max(4, it.qtd / max * 100)}%;--cor:${CORES[k % CORES.length]}"></span></span>
+        <span class="trilho"><span class="barra" style="width:${max ? Math.max(4, it.qtd / max * 100) : 0}%;--cor:${CORES[k % CORES.length]}"></span></span>
         <span class="valor">${it.qtd}</span></li>`).join('')}</ul>`;
   }
   function tempo(min) {
@@ -221,10 +224,10 @@ window.Stats = (function () {
       { id: 'generos', html: janela('🎭 gêneros favoritos', barrasH(r.generos.slice(0, 20), true)) },
       { id: 'decadas', html: janela('📅 por década', barrasV(r.decadas), r.decadas.length > 4 ? 'decadas-largo' : '') },
       { id: 'exigencia', html: janela('🍅 exigente ou pega leve?', exigencia) },
-      { id: 'notas', html: janela('⭐ como ' + voce + ' dá notas', barrasNotas(r.notas)) },
-      { id: 'diretores', html: janela('🎬 diretores mais vistos', r.diretores.length ? `<ol class="lista-top">${r.diretores.map(([d, n, titulos]) => `<li tabindex="0" title="${esc(titulos.join('\n'))}">${esc(d)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
+      { id: 'notas', html: janela('⭐ como ' + voce + ' dá notas', `${r.totalNotas ? `<p>média das notas: <b>${r.mediaNotas.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} / 5 ★</b></p>` : '<p class="vazio">sem notas ainda</p>'}${barrasNotas(r.notas)}`) },
+      { id: 'diretores', html: janela('🎬 diretores mais vistos', r.diretores.length ? `<ol class="lista-top lista-top-rolagem" tabindex="0" aria-label="Diretores mais vistos">${r.diretores.map(([d, n, titulos]) => `<li tabindex="0" title="${esc(titulos.join('\n'))}">${esc(d)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
       { id: 'paises', html: janela('🌍 volta ao mundo', r.paises.length ? `<ul class="paises">${r.paises.slice(0, 20).map(([iso, n, titulos]) => `<li tabindex="0" title="${esc(titulos.join('\n'))}">${bandeira(iso)} ${esc(nomePais(iso))} <small>(${n})</small></li>`).join('')}</ul>` : '<p class="vazio">sem dados ainda</p>') },
-      { id: 'atores', html: janela('🌟 atores que mais aparecem', r.atores.length ? `<ol class="lista-top">${r.atores.map(([a, n]) => `<li>${esc(a)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
+      { id: 'atores', html: janela('🌟 atores que mais aparecem', r.atores.length ? `<ol class="lista-top lista-top-rolagem" tabindex="0" aria-label="Atores que mais aparecem">${r.atores.map(([a, n]) => `<li>${esc(a)} <small>(${n})</small></li>`).join('')}</ol>` : '<p class="vazio">sem dados ainda</p>') },
       { id: 'compat', html: janela(ehEu ? '🤝 compatibilidade com os amigos' : `🤝 compatibilidade de ${esc(p.nome)}`, compatHtml, 'largo') },
       { id: 'generos-notas', html: janela('⭐ gêneros mais bem avaliados', r.generosNotas.length
         ? `<ol class="lista-top">${r.generosNotas.map(g => `<li>${esc(g.nome)} — <b>${g.media.toFixed(2).replace('.', ',')} / 5</b> <small>(${g.n} título${g.n === 1 ? '' : 's'})</small></li>`).join('')}</ol><p><small>Média das notas dadas aos títulos de cada gênero; só entram gêneros com 3 ou mais títulos (quando há o bastante).</small></p>`

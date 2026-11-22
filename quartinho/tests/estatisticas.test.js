@@ -37,10 +37,10 @@ test('volta ao mundo mostra até vinte países com os filmes de cada um, sem lim
   assert.equal((ctx.raiz.innerHTML.match(/<ul class="paises">([\s\S]*?)<\/ul>/)[1].match(/<li /g) || []).length, 20);
 });
 
-test('rankings exibem até vinte gêneros e diretores e listam os títulos da década correta', () => {
-  const filmes = Array.from({ length: 22 }, (_, i) => ({
+test('rankings exibem até vinte gêneros e trinta diretores e listam os títulos da década correta', () => {
+  const filmes = Array.from({ length: 32 }, (_, i) => ({
     titulo: 'Título ' + i, ano: i < 2 ? 2001 + i : 1990 + i % 10, nota: 4,
-    meta: { tipo: 'filme', generos: ['Gênero ' + i], diretor: 'Diretor ' + i, elenco: [], pais: [], nota: 0 }
+    meta: { tipo: 'filme', generos: ['Gênero ' + i], diretor: 'Diretor ' + String(i).padStart(2, '0'), elenco: [], pais: [], nota: 0 }
   }));
   filmes.push({ titulo: 'Sem ano', ano: '', nota: 4 });
   const p = { id: 'eu', nome: 'teste', assistidos: filmes };
@@ -58,12 +58,55 @@ test('rankings exibem até vinte gêneros e diretores e listam os títulos da d�
   const generos = html.match(/data-cartao="stats-generos"[\s\S]*?<\/section>/)[0];
   const diretores = html.match(/data-cartao="stats-diretores"[\s\S]*?<\/section>/)[0];
   assert.equal((generos.match(/<li /g) || []).length, 20);
-  assert.equal((diretores.match(/<li /g) || []).length, 20);
+  assert.equal(ctx.window.Stats.resumo(p).diretores.length, 30);
+  assert.equal((diretores.match(/<li /g) || []).length, 30);
+  assert.match(diretores, /Diretor 29/);
+  assert.doesNotMatch(diretores, /Diretor 30/);
+  assert.match(diretores, /lista-top-rolagem/);
   const decada = ctx.window.Stats.resumo(p).decadas.find(d => d.nome === '2000s');
   assert.equal(decada.n, 2);
   assert.deepEqual(Array.from(decada.filmes, f => f.titulo), ['Título 0', 'Título 1']);
   assert.match(html, /data-decada="2000s"/);
   assert(!html.includes('Sem ano'));
+});
+
+test('rankings roláveis e média de notas aparecem no quarto e no relatório', () => {
+  const atores = Array.from({ length: 32 }, (_, i) => 'Ator ' + String(i).padStart(2, '0'));
+  const filmes = Array.from({ length: 2 }, (_, i) => ({
+    titulo: 'Filme ' + i, ano: 2000, nota: i ? 4.5 : 3,
+    meta: { tipo: 'filme', generos: [], diretor: 'Diretor', elenco: atores, pais: [], nota: 0 }
+  }));
+  filmes.push({ titulo: 'Sem metadados', nota: 4 }, { titulo: 'Sem nota', nota: null },
+    { titulo: 'Inválido', nota: 6 });
+  const p = { id: 'eu', nome: 'teste', assistidos: filmes };
+  const ctx = {
+    window: {
+      U: { esc: String, estrelas: () => '', limitar: (v, min, max) => Math.min(max, Math.max(min, v)) },
+      Filmes: { metaDe: f => f.meta, norm: String, temChave: () => true },
+      Quartinho: { perfis: () => ({ eu: p }) }
+    },
+    document: { getElementById: () => ctx.raiz, addEventListener() {} }, raiz: {}
+  };
+  vm.createContext(ctx);
+  vm.runInContext(ler('estatisticas.js'), ctx);
+  const stats = ctx.window.Stats;
+  assert.equal(stats.resumo(p).atores.length, 30);
+  assert.equal(stats.resumo(p).totalNotas, 3);
+  for (const html of [stats.cartoesDoQuarto('eu'), (stats.render('eu'), ctx.raiz.innerHTML)]) {
+    const atoresHtml = html.match(/atores que mais aparecem[\s\S]*?<\/section>/)[0];
+    assert.match(atoresHtml, /lista-top-rolagem/);
+    assert.equal((atoresHtml.match(/<li>/g) || []).length, 30);
+    assert.match(atoresHtml, /Ator 29/);
+    assert.doesNotMatch(atoresHtml, /Ator 30/);
+    assert.match(html, /média das notas: <b>3,83 \/ 5 ★<\/b>/);
+  }
+  p.assistidos = [];
+  const vazio = stats.cartoesDoQuarto('eu');
+  assert.match(vazio, /sem notas ainda/);
+  assert.doesNotMatch(vazio, /NaN/);
+  const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'estilo.css'), 'utf8');
+  assert.match(css, /\.lista-top-rolagem\s*\{[^}]*max-height:[^}]*overflow-y:\s*auto/);
+  assert.match(css, /\.lista-top-rolagem\s*\{[^}]*list-style-position:\s*inside/);
 });
 
 test('gêneros e diretores mostram os títulos correspondentes com caracteres escapados', () => {
